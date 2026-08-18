@@ -1,0 +1,237 @@
+@import 'tailwindcss';
+
+/* ============================================================
+   Pokédex — Field Index · Design System
+   Signature: type-aura cards + oversized ghost index numerals
+   ============================================================ */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* Surfaces & ink — light theme (cool paper) */
+  --bg: #eef1f7;
+  --bg-grain: #e6eaf3;
+  --surface: #ffffff;
+  --surface-2: #f7f9fd;
+  --surface-inset: #eef1f7;
+  --border: #e2e7f1;
+  --border-strong: #cfd6e6;
+  --ink: #14161d;
+  --ink-soft: #3c4356;
+  --muted: #5f6982;
+  --faint: #aab2c6;
+  --ghost: rgba(20, 22, 29, 0.05);
+
+  /* Brand accent — deep royal indigo, used with restraint */
+  --primary: #3d5af1;
+  --primary-ink: #ffffff;
+  --primary-soft: #eaeeff;
+  --focus: #3d5af1;
+
+  --success: #17a673;
+  --warning: #e0a416;
+  --danger: #e5484d;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 2px rgba(20, 24, 40, 0.06), 0 1px 3px rgba(20, 24, 40, 0.04);
+  --shadow-md: 0 4px 12px rgba(20, 24, 40, 0.08), 0 2px 4px rgba(20, 24, 40, 0.04);
+  --shadow-lg: 0 18px 40px -12px rgba(20, 24, 40, 0.22), 0 6px 14px -8px rgba(20, 24, 40, 0.12);
+  --shadow-pop: 0 26px 60px -18px rgba(20, 24, 40, 0.32);
+}
+
+.dark {
+  --bg: #0b0d12;
+  --bg-grain: #0e111a;
+  --surface: #14171f;
+  --surface-2: #1a1e29;
+  --surface-inset: #0e111a;
+  --border: #262b38;
+  --border-strong: #333a4b;
+  --ink: #edeff5;
+  --ink-soft: #c3c9d8;
+  --muted: #929bb0;
+  --faint: #4a5266;
+  --ghost: rgba(255, 255, 255, 0.045);
+
+  --primary: #6d83ff;
+  --primary-ink: #0b0d12;
+  --primary-soft: #1c2340;
+  --focus: #8b9bff;
+
+  --success: #34d399;
+  --warning: #f5c451;
+  --danger: #ff6369;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 20px 44px -14px rgba(0, 0, 0, 0.6), 0 8px 18px -10px rgba(0, 0, 0, 0.5);
+  --shadow-pop: 0 30px 70px -20px rgba(0, 0, 0, 0.7);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-inset: var(--surface-inset);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-primary: var(--primary);
+  --color-primary-ink: var(--primary-ink);
+  --color-primary-soft: var(--primary-soft);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 22px;
+  --radius-control: 14px;
+
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-pop: var(--shadow-pop);
+
+  --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    min-height: 100dvh;
+    /* subtle atmospheric background */
+    background-image:
+      radial-gradient(1200px 600px at 12% -8%, color-mix(in srgb, var(--primary) 9%, transparent), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, color-mix(in srgb, var(--primary) 6%, transparent), transparent 55%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4, h5 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  /* Consistent, visible keyboard focus */
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 26%, transparent);
+  }
+
+  /* Numeric readouts use display face + tabular figures */
+  .tabular {
+    font-family: var(--font-display);
+    font-feature-settings: 'tnum' 1;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.875rem;
+  }
+  @media (min-width: 480px) {
+    .card-grid { gap: 1.1rem; }
+  }
+  @media (min-width: 640px) {
+    .card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  @media (min-width: 1024px) {
+    .card-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.25rem; }
+  }
+  @media (min-width: 1440px) {
+    .card-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  }
+}
+
+/* ---------- Keyframes ---------- */
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+@keyframes float-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pop-in {
+  0% { opacity: 0; transform: scale(0.96) translateY(8px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+@keyframes stat-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(var(--stat-scale, 1)); }
+}
+
+.animate-float-in {
+  animation: float-in 0.5s var(--ease-smooth) both;
+}
+.animate-pop-in {
+  animation: pop-in 0.45s var(--ease-out-back) both;
+}
+
+/* Skeleton shimmer */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--muted) 14%, transparent);
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--surface) 60%, transparent),
+    transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .skeleton::after {
+    display: none;
+  }
+}
