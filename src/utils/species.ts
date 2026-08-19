@@ -1,4 +1,11 @@
-import type { EvolutionDetail, MoveDetail, Pokemon, PokemonSpecies } from '@/types/pokemon'
+import type {
+  ChainLink,
+  EvolutionChain,
+  EvolutionDetail,
+  MoveDetail,
+  Pokemon,
+  PokemonSpecies,
+} from '@/types/pokemon'
 import { formatName } from '@/utils/pokemon'
 
 /** English genus, e.g. "Seed Pokémon". Falls back gracefully. */
@@ -96,6 +103,48 @@ export function formatLocationArea(name: string): string {
 /** "original-johto" → "Johto"; "national" → "National". */
 export function formatPokedexName(name: string): string {
   return formatName(name.replace(/^original-|-old$|updated-/g, ''))
+}
+
+/** Depth of a species within its evolution chain: 0 = Basic, 1 = Stage 1, 2 = Stage 2. */
+export function getEvolutionStage(chain: EvolutionChain | undefined, name: string): number | null {
+  if (!chain) return null
+  const walk = (link: ChainLink, depth: number): number | null => {
+    if (link.species.name === name) return depth
+    for (const next of link.evolves_to) {
+      const found = walk(next, depth + 1)
+      if (found !== null) return found
+    }
+    return null
+  }
+  return walk(chain.chain, 0)
+}
+
+export type ClassificationTone = 'neutral' | 'legendary' | 'mythical' | 'baby'
+export interface Classification {
+  label: string
+  tone: ClassificationTone
+}
+
+/**
+ * The card's top-left classification: rarity (Legendary/Mythical/Baby) takes
+ * precedence, otherwise the evolution stage (Basic / Stage 1 / Stage 2).
+ */
+export function getClassification(
+  species: PokemonSpecies | undefined,
+  chain: EvolutionChain | undefined,
+  name: string,
+): Classification | null {
+  if (!species) return null
+  if (species.is_legendary) return { label: 'Legendary', tone: 'legendary' }
+  if (species.is_mythical) return { label: 'Mythical', tone: 'mythical' }
+  if (species.is_baby) return { label: 'Baby', tone: 'baby' }
+
+  const stage = getEvolutionStage(chain, name)
+  if (stage === 0) return { label: 'Basic', tone: 'neutral' }
+  if (stage === 1) return { label: 'Stage 1', tone: 'neutral' }
+  if (stage != null && stage >= 2) return { label: 'Stage 2', tone: 'neutral' }
+  // before the chain resolves, fall back to the species' immediate pre-evo
+  return { label: species.evolves_from_species ? 'Evolved' : 'Basic', tone: 'neutral' }
 }
 
 /** Human-readable evolution trigger, e.g. "Lv. 16", "Use Fire Stone", "Trade". */

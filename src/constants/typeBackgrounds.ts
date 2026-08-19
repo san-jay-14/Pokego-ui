@@ -12,6 +12,19 @@ const TYPE_BACKGROUNDS: Partial<Record<PokemonTypeName, string>> = {
   water: "/type_bg/water_bg.webp",
   fire: "/type_bg/fire_bg.webp",
   bug: "/type_bg/bug_bg.webp",
+  psychic: "/type_bg/psychic_bg.webp",
+  ice: "/type_bg/ice_bg.webp",
+  dragon: "/type_bg/dragon_bg.webp",
+  dark: "/type_bg/dark_bg.webp",
+  fairy: "/type_bg/fairy_bg.webp",
+  fighting: "/type_bg/fighting_bg.webp",
+  poison: "/type_bg/poison_bg.webp",
+  ground: "/type_bg/ground_bg.webp",
+  flying: "/type_bg/flying_bg.webp",
+  rock: "/type_bg/rock_bg.webp",
+  ghost: "/type_bg/ghost_bg.webp",
+  steel: "/type_bg/steel_bg.webp",
+  normal: "/type_bg/normal_bg.webp",
 };
 
 export function getTypeBackground(type: string): string | null {

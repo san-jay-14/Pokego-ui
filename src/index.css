@@ -90,6 +90,8 @@
   --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
   /* Humanist face used on the trading cards — close to the real TCG typeface */
   --font-card: 'Cabin', 'Gill Sans', 'Gill Sans MT', 'Segoe UI', sans-serif;
+  /* Tall condensed display face for the card's stage tag */
+  --font-stage: 'Bebas Neue', 'Oswald', 'Segoe UI Condensed', sans-serif;
 
   --radius-card: 22px;
   --radius-control: 14px;
@@ -158,22 +160,20 @@
     scrollbar-width: none;
   }
 
+  /* Larger, more legible cards — fewer columns per breakpoint. */
   .card-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.875rem;
+    gap: 1.5rem;
   }
-  @media (min-width: 480px) {
-    .card-grid { gap: 1.1rem; }
+  @media (min-width: 560px) {
+    .card-grid { gap: 1.75rem; }
   }
-  @media (min-width: 640px) {
+  @media (min-width: 900px) {
     .card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
-  @media (min-width: 1024px) {
-    .card-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.25rem; }
-  }
-  @media (min-width: 1440px) {
-    .card-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  @media (min-width: 1280px) {
+    .card-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2rem; }
   }
 }
 
@@ -195,6 +195,25 @@
 @keyframes stat-grow {
   from { transform: scaleX(0); }
   to { transform: scaleX(var(--stat-scale, 1)); }
+}
+
+/* Legendary card frame — darker gold with a scattered glitter texture */
+.tcg-gold-glitter {
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.95) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 42% 62%, rgba(255, 255, 255, 0.75) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 78% 24%, rgba(255, 255, 255, 0.9) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 22% 82%, rgba(255, 255, 255, 0.65) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 62% 88%, rgba(255, 255, 255, 0.8) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 90% 68%, rgba(255, 255, 255, 0.55) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 55% 12%, rgba(255, 255, 255, 0.7) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 8% 55%, rgba(255, 255, 255, 0.6) 0 1px, transparent 1.6px),
+    linear-gradient(135deg, #6b4a12 0%, #caa53d 25%, #ffe9a8 50%, #b8862a 75%, #4a3008 100%);
+  background-size:
+    17px 17px, 21px 21px, 15px 15px, 19px 19px,
+    23px 23px, 13px 13px, 25px 25px, 18px 18px,
+    100% 100%;
+  background-repeat: repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat, no-repeat;
 }
 
 .animate-float-in {
