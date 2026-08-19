@@ -82,6 +82,7 @@ export const PokemonCard = memo(function PokemonCard({ pokemon, index = 0 }: Pok
   const topWeak = effectiveness.data?.weak[0]
   const weakType = topWeak?.type ?? weaknessFor(primary)
   const weakLabel = topWeak ? formatMultiplier(topWeak.multiplier) : '×2'
+  const topResist = effectiveness.data?.resist[0]
 
   const isFavorite = useAppStore((s) => s.favorites.includes(pokemon.id))
   const toggleFavorite = useAppStore((s) => s.toggleFavorite)
@@ -258,7 +259,16 @@ export const PokemonCard = memo(function PokemonCard({ pokemon, index = 0 }: Pok
                   </span>
                 </FooterCell>
                 <FooterCell label="Resistance" muted={muted} borderColor={LINE}>
-                  <span style={{ color: muted, fontSize: 'clamp(8px, 3.4cqw, 12px)' }}>—</span>
+                  {topResist ? (
+                    <>
+                      <EnergyPip type={topResist.type} size={13} />
+                      <span className="tabular font-bold" style={{ fontSize: 'clamp(7px, 3cqw, 10px)' }}>
+                        {formatMultiplier(topResist.multiplier)}
+                      </span>
+                    </>
+                  ) : (
+                    <span style={{ color: muted, fontSize: 'clamp(8px, 3.4cqw, 12px)' }}>—</span>
+                  )}
                 </FooterCell>
                 <FooterCell label="Retreat" muted={muted}>
                   {Array.from({ length: retreat }).map((_, i) => (
@@ -325,7 +335,28 @@ function EvoBadge({ src }: { src: string }) {
   )
 }
 
-function AttackRow({ name, detail, fallbackType }: { name: string; detail: MoveDetail | undefined; fallbackType: string }) {
+function AttackRow({
+  name,
+  detail,
+  fallbackType,
+}: {
+  name: string | undefined
+  detail: MoveDetail | undefined
+  fallbackType: string
+}) {
+  // A Pokémon (or form) can have zero moves listed in the API — show a
+  // neutral placeholder rather than crash formatting an undefined name.
+  if (!name) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <EnergyPip type={fallbackType} size={14} />
+        <span className="min-w-0 flex-1 truncate font-semibold" style={{ fontSize: 'clamp(10px, 4.4cqw, 15px)', color: MUTED }}>
+          No known moves
+        </span>
+      </div>
+    )
+  }
+
   const cost = detail
     ? energyCostForPower(detail.power, detail.type.name)
     : [fallbackType]
