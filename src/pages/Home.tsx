@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { RefObject } from 'react'
 import { Heart } from 'lucide-react'
 import { usePokemonIndex, usePokemonDetails, useTypeMembers } from '@/hooks/usePokemonData'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
@@ -8,6 +9,7 @@ import { getSortOption, type SortDirection, type SortKey } from '@/constants/sor
 import { getStat } from '@/utils/pokemon'
 import type { PokemonIndexEntry } from '@/types/pokemon'
 import { PageContainer } from '@/components/layout/PageContainer'
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { SearchBar } from '@/components/search/SearchBar'
 import { TypeFilter, type TypeFilterValue } from '@/components/filters/TypeFilter'
 import { SortControl } from '@/components/filters/SortControl'
@@ -16,6 +18,7 @@ import { CardSkeletonGrid } from '@/components/states/CardSkeleton'
 import { ErrorState } from '@/components/states/ErrorState'
 import { EmptyState } from '@/components/states/EmptyState'
 import { Button } from '@/components/ui/Button'
+import { PokeballIcon } from '@/components/ui/PokeballIcon'
 import { PokeballSpinner } from '@/components/ui/PokeballSpinner'
 
 const PAGE_SIZE = 20
@@ -33,6 +36,19 @@ export function Home() {
 
   const index = usePokemonIndex()
   const typeMembers = useTypeMembers(type)
+
+  // Tracks whether the hero has scrolled past the top of the viewport, so the
+  // compact filter bar can take over search/filter access.
+  const heroEndRef = useRef<HTMLDivElement>(null)
+  const [isCompact, setIsCompact] = useState(false)
+
+  useEffect(() => {
+    const el = heroEndRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(([entry]) => setIsCompact(!entry.isIntersecting))
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   // Reset pagination whenever the result set (not just its order) changes.
   useEffect(() => {
@@ -101,6 +117,7 @@ export function Home() {
   const pendingCount = Math.max(0, pagedEntries.length - pokemon.length)
   const initialLoading = index.isLoading || (type !== 'all' && typeMembers.isLoading)
   const searching = search.trim() !== debouncedSearch
+  const toggleFavoritesOnly = () => setFavoritesOnly((v) => !v)
 
   return (
     <>
@@ -109,49 +126,33 @@ export function Home() {
         onSearch={setSearch}
         searching={searching}
         totalIndexed={index.data?.length ?? 0}
+        type={type}
+        onTypeChange={setType}
+        sortKey={sortKey}
+        direction={direction}
+        onSortKeyChange={handleSortKeyChange}
+        onDirectionToggle={() => setDirection((d) => (d === 'asc' ? 'desc' : 'asc'))}
+        favoritesOnly={favoritesOnly}
+        favoritesCount={favorites.length}
+        onToggleFavorites={toggleFavoritesOnly}
+        resultCount={filteredEntries.length}
+        showCount={!initialLoading}
+        sentinelRef={heroEndRef}
       />
 
-      <PageContainer className="pb-28 pt-2">
-        {/* Controls */}
-        <div className="mb-6 flex flex-col gap-4">
-          <TypeFilter value={type} onChange={setType} />
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <SortControl
-                sortKey={sortKey}
-                direction={direction}
-                onSortKeyChange={handleSortKeyChange}
-                onDirectionToggle={() => setDirection((d) => (d === 'asc' ? 'desc' : 'asc'))}
-              />
-              <button
-                type="button"
-                onClick={() => setFavoritesOnly((v) => !v)}
-                aria-pressed={favoritesOnly}
-                className={`inline-flex h-11 items-center gap-2 rounded-[var(--radius-control)] border px-4 text-sm font-semibold transition-colors ${
-                  favoritesOnly
-                    ? 'border-transparent bg-danger/12 text-danger'
-                    : 'border-border bg-surface text-muted hover:text-ink'
-                }`}
-              >
-                <Heart className="h-4 w-4" fill={favoritesOnly ? 'currentColor' : 'none'} strokeWidth={2.2} />
-                <span className="hidden sm:inline">Favourites</span>
-                {favorites.length > 0 && (
-                  <span className="tabular rounded-full bg-surface-inset px-1.5 text-xs">
-                    {favorites.length}
-                  </span>
-                )}
-              </button>
-            </div>
+      <CompactFilterBar
+        visible={isCompact}
+        search={search}
+        onSearch={setSearch}
+        searching={searching}
+        type={type}
+        onTypeChange={setType}
+        favoritesOnly={favoritesOnly}
+        favoritesCount={favorites.length}
+        onToggleFavorites={toggleFavoritesOnly}
+      />
 
-            {!initialLoading && (
-              <p className="tabular text-sm font-medium text-muted" aria-live="polite">
-                {filteredEntries.length.toLocaleString()}{' '}
-                {filteredEntries.length === 1 ? 'Pokémon' : 'Pokémon'}
-              </p>
-            )}
-          </div>
-        </div>
-
+      <PageContainer className="pb-28 pt-6">
         {/* Body */}
         {index.isError ? (
           <ErrorState error={index.error} onRetry={() => index.refetch()} />
@@ -174,7 +175,7 @@ export function Home() {
             {hasMore && (
               <div className="mt-10 flex justify-center">
                 <Button
-                  variant="primary"
+                  variant="danger"
                   size="lg"
                   onClick={() => setVisiblePages((p) => p + 1)}
                   disabled={detailsLoading}
@@ -203,32 +204,198 @@ interface HeroProps {
   onSearch: (v: string) => void
   searching: boolean
   totalIndexed: number
+  type: TypeFilterValue
+  onTypeChange: (v: TypeFilterValue) => void
+  sortKey: SortKey
+  direction: SortDirection
+  onSortKeyChange: (key: SortKey) => void
+  onDirectionToggle: () => void
+  favoritesOnly: boolean
+  favoritesCount: number
+  onToggleFavorites: () => void
+  resultCount: number
+  showCount: boolean
+  sentinelRef: RefObject<HTMLDivElement | null>
 }
 
-function Hero({ search, onSearch, searching, totalIndexed }: HeroProps) {
+function Hero({
+  search,
+  onSearch,
+  searching,
+  totalIndexed,
+  type,
+  onTypeChange,
+  sortKey,
+  direction,
+  onSortKeyChange,
+  onDirectionToggle,
+  favoritesOnly,
+  favoritesCount,
+  onToggleFavorites,
+  resultCount,
+  showCount,
+  sentinelRef,
+}: HeroProps) {
   return (
-    <section className="relative overflow-hidden">
-      <PageContainer className="pb-6 pt-8 sm:pt-12">
-        <div className="mx-auto max-w-2xl text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/70 px-3.5 py-1.5 text-xs font-semibold text-muted backdrop-blur-sm">
-            <span className="h-1.5 w-1.5 rounded-full bg-success" />
-            {totalIndexed > 0 ? `${totalIndexed.toLocaleString()} Pokémon indexed` : 'Live PokéAPI data'}
-          </span>
-          <h1 className="mt-4 text-4xl font-bold leading-[1.05] tracking-tight text-ink sm:text-5xl md:text-6xl">
-            Explore the{' '}
-            <span className="bg-gradient-to-r from-primary to-[#8b5cf6] bg-clip-text text-transparent">
-              Pokédex
+    <section className="relative overflow-hidden border-b border-border">
+      {/* Background — placeholder gradient today; drop a real photo at /hero-bg.jpg to swap it in */}
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-soft via-bg to-bg" />
+        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/hero-bg.jpg')" }} />
+        <div className="absolute inset-0 bg-bg/80 backdrop-blur-[2px]" />
+      </div>
+
+      <PageContainer className="pb-6 pt-6 sm:pt-8">
+        <div className="mx-auto max-w-3xl">
+          <div className="flex items-center justify-between">
+            <PokeballIcon size={36} className="drop-shadow-sm" />
+            <QuickActions
+              favoritesOnly={favoritesOnly}
+              favoritesCount={favoritesCount}
+              onToggleFavorites={onToggleFavorites}
+            />
+          </div>
+
+          <div className="mt-5 text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/70 px-3.5 py-1.5 text-xs font-semibold text-muted backdrop-blur-sm">
+              <span className="h-1.5 w-1.5 rounded-full bg-success" />
+              {totalIndexed > 0 ? `${totalIndexed.toLocaleString()} Pokémon indexed` : 'Live PokéAPI data'}
             </span>
-          </h1>
-          <p className="mx-auto mt-3 max-w-md text-base text-muted sm:text-lg">
-            Search, filter and compare every Pokémon — stats, types, abilities and moves, in one fast field guide.
-          </p>
+            <h1 className="mt-4 text-4xl font-bold leading-[1.05] tracking-tight text-ink sm:text-5xl md:text-6xl">
+              Explore the{' '}
+              <span className="bg-gradient-to-r from-primary to-[#8b5cf6] bg-clip-text text-transparent">
+                Pokédex
+              </span>
+            </h1>
+            <p className="mx-auto mt-3 max-w-md text-base text-muted sm:text-lg">
+              Search, filter and compare every Pokémon — stats, types, abilities and moves, in one fast field guide.
+            </p>
+          </div>
+
           <div className="mx-auto mt-6 max-w-xl">
-            <SearchBar value={search} onChange={onSearch} loading={searching} />
+            <FilterBar search={search} onSearch={onSearch} searching={searching} type={type} onTypeChange={onTypeChange} />
+
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+              <SortControl
+                sortKey={sortKey}
+                direction={direction}
+                onSortKeyChange={onSortKeyChange}
+                onDirectionToggle={onDirectionToggle}
+              />
+              {showCount && (
+                <p className="tabular text-sm font-medium text-muted" aria-live="polite">
+                  {resultCount.toLocaleString()} Pokémon
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </PageContainer>
+
+      {/* Once this edge scrolls under the sticky header, the compact bar takes over */}
+      <div ref={sentinelRef} className="absolute inset-x-0 bottom-0 h-px" aria-hidden="true" />
     </section>
+  )
+}
+
+/** The type-dropdown + search field, merged into one bordered bar. Reused full-size in the hero and compact in the sticky bar. */
+function FilterBar({
+  search,
+  onSearch,
+  searching,
+  type,
+  onTypeChange,
+}: {
+  search: string
+  onSearch: (v: string) => void
+  searching: boolean
+  type: TypeFilterValue
+  onTypeChange: (v: TypeFilterValue) => void
+}) {
+  return (
+    <div className="flex overflow-hidden rounded-[var(--radius-control)] border border-border bg-surface shadow-[var(--shadow-sm)]">
+      <TypeFilter value={type} onChange={onTypeChange} bare className="w-[9.5rem] shrink-0 sm:w-44" />
+      <div className="w-px shrink-0 bg-border" />
+      <SearchBar value={search} onChange={onSearch} loading={searching} bare />
+    </div>
+  )
+}
+
+/** Favourites toggle + theme toggle, grouped top-right in both the hero and the compact bar. */
+function QuickActions({
+  favoritesOnly,
+  favoritesCount,
+  onToggleFavorites,
+}: {
+  favoritesOnly: boolean
+  favoritesCount: number
+  onToggleFavorites: () => void
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={onToggleFavorites}
+        aria-pressed={favoritesOnly}
+        aria-label={favoritesOnly ? 'Show all Pokémon' : 'Show favourites only'}
+        className={`relative grid h-11 w-11 shrink-0 place-items-center rounded-full border transition-all duration-200 active:scale-90 ${
+          favoritesOnly
+            ? 'border-transparent bg-danger text-white'
+            : 'border-border bg-surface text-muted hover:border-border-strong hover:text-ink'
+        }`}
+      >
+        <Heart className="h-[18px] w-[18px]" fill={favoritesOnly ? 'currentColor' : 'none'} strokeWidth={2.2} />
+        {favoritesCount > 0 && (
+          <span className="tabular absolute -right-1 -top-1 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">
+            {favoritesCount}
+          </span>
+        )}
+      </button>
+      <ThemeToggle />
+    </div>
+  )
+}
+
+/** Compact sticky filter bar — fades in under the header once the hero scrolls away, so search/filter stay reachable. */
+function CompactFilterBar({
+  visible,
+  search,
+  onSearch,
+  searching,
+  type,
+  onTypeChange,
+  favoritesOnly,
+  favoritesCount,
+  onToggleFavorites,
+}: {
+  visible: boolean
+  search: string
+  onSearch: (v: string) => void
+  searching: boolean
+  type: TypeFilterValue
+  onTypeChange: (v: TypeFilterValue) => void
+  favoritesOnly: boolean
+  favoritesCount: number
+  onToggleFavorites: () => void
+}) {
+  return (
+    <div
+      className={`fixed inset-x-0 top-0 z-30 border-b border-border bg-bg/90 shadow-[var(--shadow-sm)] backdrop-blur-xl transition-all duration-300 ${
+        visible ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'
+      }`}
+      aria-hidden={!visible}
+    >
+      <PageContainer className="flex items-center gap-3 py-2.5">
+        <div className="min-w-0 flex-1">
+          <FilterBar search={search} onSearch={onSearch} searching={searching} type={type} onTypeChange={onTypeChange} />
+        </div>
+        <QuickActions
+          favoritesOnly={favoritesOnly}
+          favoritesCount={favoritesCount}
+          onToggleFavorites={onToggleFavorites}
+        />
+      </PageContainer>
+    </div>
   )
 }
 

@@ -7,6 +7,8 @@ interface SearchBarProps {
   onChange: (value: string) => void
   loading?: boolean
   placeholder?: string
+  /** Strips the field's own border/background so it can sit flush inside a shared bar. */
+  bare?: boolean
 }
 
 /**
@@ -18,6 +20,7 @@ export function SearchBar({
   onChange,
   loading = false,
   placeholder = 'Search Pokémon…',
+  bare = false,
 }: SearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -45,7 +48,11 @@ export function SearchBar({
         }}
         placeholder={placeholder}
         aria-label="Search Pokémon by name or dex number"
-        className="h-13 w-full rounded-[var(--radius-control)] border border-border bg-surface py-3.5 pl-12 pr-11 text-base font-medium text-ink shadow-[var(--shadow-sm)] outline-none transition-[border-color,box-shadow] placeholder:text-faint focus:border-primary/60 focus:shadow-[0_0_0_4px_var(--primary-soft)] [&::-webkit-search-cancel-button]:hidden"
+        className={`h-13 w-full py-3.5 pl-12 pr-11 text-base font-medium text-ink outline-none transition-[border-color,box-shadow] placeholder:text-faint [&::-webkit-search-cancel-button]:hidden ${
+          bare
+            ? 'border-0 bg-transparent'
+            : 'rounded-[var(--radius-control)] border border-border bg-surface shadow-[var(--shadow-sm)] focus:border-primary/60 focus:shadow-[0_0_0_4px_var(--primary-soft)]'
+        }`}
       />
 
       {value && (

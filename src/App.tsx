@@ -1,6 +1,5 @@
 import { Route, Routes } from 'react-router-dom'
 import { useThemeEffect } from '@/hooks/useThemeEffect'
-import { Header } from '@/components/layout/Header'
 import { ScrollToTop } from '@/components/layout/ScrollToTop'
 import { CompareTray } from '@/components/compare/CompareTray'
 import { Home } from '@/pages/Home'
@@ -13,7 +12,6 @@ export default function App() {
   return (
     <div className="flex min-h-dvh flex-col">
       <ScrollToTop />
-      <Header />
       <main className="flex-1">
         <Routes>
           <Route path="/" element={<Home />} />
