@@ -27,3 +27,6 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Source type backgrounds — commit only the optimized .webp
+public/type_bg/*.png

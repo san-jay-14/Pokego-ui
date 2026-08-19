@@ -1,16 +1,33 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import {
+  fetchAbility,
   fetchAllPokemonIndex,
+  fetchEvolutionChain,
+  fetchMove,
   fetchPokemon,
   fetchPokemonByType,
+  fetchPokemonSpecies,
+  fetchTypeDetail,
 } from '@/services/pokemonApi'
-import type { Pokemon, PokemonIndexEntry } from '@/types/pokemon'
+import type {
+  AbilityDetail,
+  MoveDetail,
+  Pokemon,
+  PokemonIndexEntry,
+  TypeDetail,
+} from '@/types/pokemon'
+import { computeTypeEffectiveness, type TypeEffectiveness } from '@/utils/typeEffectiveness'
 
 /** Query key factory — keeps cache keys consistent across the app. */
 export const pokemonKeys = {
   index: ['pokemon', 'index'] as const,
   detail: (nameOrId: string | number) => ['pokemon', 'detail', String(nameOrId)] as const,
   type: (type: string) => ['pokemon', 'type', type] as const,
+  species: (nameOrId: string | number) => ['pokemon', 'species', String(nameOrId)] as const,
+  evolution: (url: string) => ['pokemon', 'evolution', url] as const,
+  typeDetail: (type: string) => ['type', 'detail', type] as const,
+  move: (name: string) => ['move', name] as const,
+  ability: (name: string) => ['ability', name] as const,
 }
 
 /** The full lightweight dex index (name + id), fetched once per session. */
@@ -72,4 +89,82 @@ export function usePokemonDetails(entries: PokemonIndexEntry[]): PokemonDetailsB
   const isError = entries.length > 0 && results.every((r) => r.isError)
 
   return { pokemon, isLoading, isError }
+}
+
+/** Species-level flavor data. Enabled once we know the name/id. */
+export function usePokemonSpecies(nameOrId: string | number | undefined) {
+  return useQuery({
+    queryKey: pokemonKeys.species(nameOrId ?? ''),
+    queryFn: ({ signal }) => fetchPokemonSpecies(nameOrId as string | number, signal),
+    enabled: nameOrId != null && nameOrId !== '',
+    staleTime: Infinity,
+  })
+}
+
+/** Evolution chain, resolved from the species' chain url. */
+export function useEvolutionChain(url: string | undefined) {
+  return useQuery({
+    queryKey: pokemonKeys.evolution(url ?? ''),
+    queryFn: ({ signal }) => fetchEvolutionChain(url as string, signal),
+    enabled: Boolean(url),
+    staleTime: Infinity,
+  })
+}
+
+/** Net type effectiveness for a Pokémon's (one or two) types. */
+export function useTypeEffectiveness(types: string[]): {
+  data: TypeEffectiveness | undefined
+  isLoading: boolean
+} {
+  const results = useQueries({
+    queries: types.map((type) => ({
+      queryKey: pokemonKeys.typeDetail(type),
+      queryFn: ({ signal }: { signal: AbortSignal }) => fetchTypeDetail(type, signal),
+      staleTime: Infinity,
+    })),
+  })
+
+  const details = results
+    .map((r) => r.data)
+    .filter((d): d is TypeDetail => Boolean(d))
+
+  const isLoading = results.some((r) => r.isLoading)
+  const data =
+    details.length === types.length && types.length > 0
+      ? computeTypeEffectiveness(details)
+      : undefined
+
+  return { data, isLoading }
+}
+
+/** Batch move details (real power/accuracy/PP/type/class), preserving input order. */
+export function useMoveDetails(names: string[]) {
+  const results = useQueries({
+    queries: names.map((name) => ({
+      queryKey: pokemonKeys.move(name),
+      queryFn: ({ signal }: { signal: AbortSignal }) => fetchMove(name, signal),
+      staleTime: Infinity,
+    })),
+  })
+  const byName = new Map<string, MoveDetail>()
+  results.forEach((r) => {
+    if (r.data) byName.set(r.data.name, r.data)
+  })
+  return { byName, isLoading: results.some((r) => r.isLoading) }
+}
+
+/** Batch ability details (effect text). */
+export function useAbilityDetails(names: string[]) {
+  const results = useQueries({
+    queries: names.map((name) => ({
+      queryKey: pokemonKeys.ability(name),
+      queryFn: ({ signal }: { signal: AbortSignal }) => fetchAbility(name, signal),
+      staleTime: Infinity,
+    })),
+  })
+  const byName = new Map<string, AbilityDetail>()
+  results.forEach((r) => {
+    if (r.data) byName.set(r.data.name, r.data)
+  })
+  return { byName, isLoading: results.some((r) => r.isLoading) }
 }

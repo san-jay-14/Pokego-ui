@@ -23,6 +23,19 @@ export function formatWeight(hectograms: number): string {
   return `${(hectograms / 10).toFixed(1)} kg`
 }
 
+/** API height (decimetres) -> feet & inches, TCG-style, e.g. 5'03". */
+export function formatHeightImperial(decimetres: number): string {
+  const totalInches = Math.round((decimetres / 10) * 39.3701)
+  const feet = Math.floor(totalInches / 12)
+  const inches = totalInches % 12
+  return `${feet}'${String(inches).padStart(2, '0')}"`
+}
+
+/** API weight (hectograms) -> pounds, TCG-style, e.g. 188.5 lbs. */
+export function formatWeightImperial(hectograms: number): string {
+  return `${((hectograms / 10) * 2.20462).toFixed(1)} lbs.`
+}
+
 const ARTWORK_CDN =
   'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork'
 

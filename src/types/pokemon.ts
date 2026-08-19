@@ -37,19 +37,38 @@ export interface PokemonAbility {
 
 export interface PokemonMoveSlot {
   move: NamedAPIResource
+  version_group_details: PokemonMoveVersionDetail[]
 }
 
 export interface PokemonSprites {
   front_default: string | null
+  back_default?: string | null
   front_shiny: string | null
+  back_shiny?: string | null
   other?: {
     dream_world?: { front_default: string | null }
-    home?: { front_default: string | null }
+    home?: { front_default: string | null; front_shiny?: string | null }
+    showdown?: { front_default: string | null }
     ['official-artwork']?: {
       front_default: string | null
       front_shiny?: string | null
     }
   }
+}
+
+export interface PokemonCries {
+  latest: string | null
+  legacy: string | null
+}
+
+export interface HeldItem {
+  item: NamedAPIResource
+}
+
+export interface PokemonMoveVersionDetail {
+  level_learned_at: number
+  move_learn_method: NamedAPIResource
+  version_group: NamedAPIResource
 }
 
 /** Response shape of GET /pokemon/{name|id} */
@@ -64,6 +83,105 @@ export interface Pokemon {
   abilities: PokemonAbility[]
   moves: PokemonMoveSlot[]
   sprites: PokemonSprites
+  cries?: PokemonCries
+  held_items?: HeldItem[]
+}
+
+/** GET /pokemon-species/{id} — the "flavor" data (Pokédex text, breeding, etc.) */
+export interface FlavorTextEntry {
+  flavor_text: string
+  language: NamedAPIResource
+  version: NamedAPIResource
+}
+
+export interface Genus {
+  genus: string
+  language: NamedAPIResource
+}
+
+export interface PokemonSpecies {
+  id: number
+  name: string
+  genera: Genus[]
+  flavor_text_entries: FlavorTextEntry[]
+  evolution_chain: { url: string }
+  evolves_from_species: NamedAPIResource | null
+  generation: NamedAPIResource
+  habitat: NamedAPIResource | null
+  shape: NamedAPIResource | null
+  color: NamedAPIResource
+  is_legendary: boolean
+  is_mythical: boolean
+  is_baby: boolean
+  capture_rate: number
+  base_happiness: number | null
+  growth_rate: NamedAPIResource | null
+  gender_rate: number // -1 genderless; else eighths female
+  egg_groups: NamedAPIResource[]
+  hatch_counter: number | null
+}
+
+/** GET /evolution-chain/{id} */
+export interface EvolutionDetail {
+  min_level: number | null
+  trigger: NamedAPIResource | null
+  item: NamedAPIResource | null
+  held_item: NamedAPIResource | null
+  min_happiness: number | null
+  time_of_day: string
+  known_move: NamedAPIResource | null
+  location: NamedAPIResource | null
+  gender: number | null
+}
+
+export interface ChainLink {
+  species: NamedAPIResource
+  evolution_details: EvolutionDetail[]
+  evolves_to: ChainLink[]
+}
+
+export interface EvolutionChain {
+  id: number
+  chain: ChainLink
+}
+
+/** GET /type/{name} — defensive damage relations we use for type effectiveness. */
+export interface TypeDetail {
+  name: string
+  damage_relations: {
+    double_damage_from: NamedAPIResource[]
+    half_damage_from: NamedAPIResource[]
+    no_damage_from: NamedAPIResource[]
+    double_damage_to: NamedAPIResource[]
+    half_damage_to: NamedAPIResource[]
+    no_damage_to: NamedAPIResource[]
+  }
+}
+
+export interface VerboseEffect {
+  effect: string
+  short_effect: string
+  language: NamedAPIResource
+}
+
+/** GET /move/{name} */
+export interface MoveDetail {
+  id: number
+  name: string
+  type: NamedAPIResource
+  power: number | null
+  pp: number | null
+  accuracy: number | null
+  priority: number
+  damage_class: NamedAPIResource | null
+  effect_entries: VerboseEffect[]
+}
+
+/** GET /ability/{name} */
+export interface AbilityDetail {
+  id: number
+  name: string
+  effect_entries: VerboseEffect[]
 }
 
 /** Response shape of GET /type/{type} (only the members we need) */

@@ -1,17 +1,19 @@
+import { useMemo } from 'react'
 import type { ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ChevronLeft, ChevronRight, Ruler, Sparkles, Weight, Zap } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, Crown, Sparkles, Star, Zap } from 'lucide-react'
 import type { Pokemon } from '@/types/pokemon'
-import { usePokemonDetail } from '@/hooks/usePokemonData'
-import { getTypeConfig } from '@/constants/pokemonTypes'
 import {
-  formatDexId,
-  formatHeight,
-  formatName,
-  formatWeight,
-  getArtwork,
-  primaryType,
-} from '@/utils/pokemon'
+  useAbilityDetails,
+  useEvolutionChain,
+  useMoveDetails,
+  usePokemonDetail,
+  usePokemonSpecies,
+  useTypeEffectiveness,
+} from '@/hooks/usePokemonData'
+import { getTypeConfig } from '@/constants/pokemonTypes'
+import { formatDexId, formatName, getArtwork, primaryType } from '@/utils/pokemon'
+import { countMachineMoves, getGenus, getLevelUpMoves } from '@/utils/species'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { StatBars } from '@/components/pokemon/StatBars'
 import { FavoriteButton } from '@/components/favorites/FavoriteButton'
@@ -19,6 +21,15 @@ import { DetailSkeleton } from '@/components/states/DetailSkeleton'
 import { ErrorState } from '@/components/states/ErrorState'
 import { Button } from '@/components/ui/Button'
 import { ApiError } from '@/services/pokemonApi'
+import { SectionCard } from '@/components/pokemon/detail/Section'
+import { PokedexEntry } from '@/components/pokemon/detail/PokedexEntry'
+import { ProfilePanel } from '@/components/pokemon/detail/ProfilePanel'
+import { TypeDefenses } from '@/components/pokemon/detail/TypeDefenses'
+import { AbilitiesPanel } from '@/components/pokemon/detail/AbilitiesPanel'
+import { EvolutionChain } from '@/components/pokemon/detail/EvolutionChain'
+import { MovesTable } from '@/components/pokemon/detail/MovesTable'
+import { SpriteGallery } from '@/components/pokemon/detail/SpriteGallery'
+import { CryButton } from '@/components/pokemon/detail/CryButton'
 
 export function PokemonDetail() {
   const { name } = useParams<{ name: string }>()
@@ -59,44 +70,42 @@ export function PokemonDetail() {
 
 function DetailContent({ pokemon }: { pokemon: Pokemon }) {
   const cfg = getTypeConfig(primaryType(pokemon))
-  const abilities = pokemon.abilities
-  const moves = pokemon.moves.slice(0, 14)
+
+  const species = usePokemonSpecies(pokemon.id)
+  const evolution = useEvolutionChain(species.data?.evolution_chain.url)
+
+  const typeNames = useMemo(() => pokemon.types.map((t) => t.type.name), [pokemon])
+  const effectiveness = useTypeEffectiveness(typeNames)
+
+  const abilityNames = useMemo(() => pokemon.abilities.map((a) => a.ability.name), [pokemon])
+  const abilities = useAbilityDetails(abilityNames)
+
+  const moveNames = useMemo(() => getLevelUpMoves(pokemon).map((m) => m.name), [pokemon])
+  const moves = useMoveDetails(moveNames)
+  const machineCount = useMemo(() => countMachineMoves(pokemon), [pokemon])
+
+  const genus = species.data ? getGenus(species.data) : undefined
 
   return (
-    <article className="animate-float-in">
+    <article className="animate-float-in flex flex-col gap-5">
       {/* Hero */}
       <section
         className="relative overflow-hidden rounded-[var(--radius-card)] px-6 py-7 text-white shadow-[var(--shadow-lg)] sm:px-10 sm:py-9"
         style={{ background: `linear-gradient(135deg, ${cfg.from}, ${cfg.to})` }}
       >
-        {/* Contrast scrim — guarantees white text is legible on light-type gradients */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/15 via-black/25 to-black/45"
-        />
-        {/* Watermark */}
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 100 100"
-          className="pointer-events-none absolute -right-10 -top-12 h-64 w-64 opacity-15"
-        >
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/15 via-black/25 to-black/45" />
+        <svg aria-hidden="true" viewBox="0 0 100 100" className="pointer-events-none absolute -right-10 -top-12 h-64 w-64 opacity-15">
           <circle cx="50" cy="50" r="46" fill="none" stroke="white" strokeWidth="4" />
           <path d="M4 50h30a16 16 0 0 1 32 0h30" fill="none" stroke="white" strokeWidth="4" />
           <circle cx="50" cy="50" r="11" fill="white" />
         </svg>
-        <span
-          aria-hidden="true"
-          className="tabular pointer-events-none absolute -bottom-6 right-4 select-none text-[9rem] font-bold leading-none text-white/10"
-        >
+        <span aria-hidden="true" className="tabular pointer-events-none absolute -bottom-6 right-4 select-none text-[9rem] font-bold leading-none text-white/10">
           {String(pokemon.id).padStart(3, '0')}
         </span>
 
         <div className="relative flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:gap-10">
           <div className="relative shrink-0">
-            <div
-              className="absolute inset-0 -z-10 rounded-full blur-2xl"
-              style={{ background: 'rgba(255,255,255,0.35)' }}
-            />
+            <div className="absolute inset-0 -z-10 rounded-full blur-2xl" style={{ background: 'rgba(255,255,255,0.35)' }} />
             <img
               src={getArtwork(pokemon)}
               alt={formatName(pokemon.name)}
@@ -110,148 +119,73 @@ function DetailContent({ pokemon }: { pokemon: Pokemon }) {
             />
           </div>
 
-          <div
-            className="flex flex-1 flex-col items-center text-center sm:items-start sm:text-left"
-            style={{ textShadow: '0 2px 14px rgba(0,0,0,0.35)' }}
-          >
+          <div className="flex flex-1 flex-col items-center text-center sm:items-start sm:text-left" style={{ textShadow: '0 2px 14px rgba(0,0,0,0.35)' }}>
             <span className="tabular text-sm font-bold uppercase tracking-[0.2em] text-white/80">
               {formatDexId(pokemon.id)}
             </span>
-            <h1 className="mt-1 text-4xl font-bold tracking-tight sm:text-5xl">
-              {formatName(pokemon.name)}
-            </h1>
-            <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
+            <h1 className="mt-1 text-4xl font-bold tracking-tight sm:text-5xl">{formatName(pokemon.name)}</h1>
+            {genus && <p className="mt-1 text-sm font-semibold text-white/85">{genus}</p>}
+
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
               {pokemon.types.map((t) => (
-                <span
-                  key={t.type.name}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3.5 py-1.5 text-sm font-semibold backdrop-blur-sm"
-                >
+                <span key={t.type.name} className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3.5 py-1.5 text-sm font-semibold backdrop-blur-sm">
                   <span aria-hidden="true">{getTypeConfig(t.type.name).emoji}</span>
                   {getTypeConfig(t.type.name).label}
                 </span>
               ))}
+              {species.data?.is_legendary && <RarityBadge icon={<Crown className="h-3.5 w-3.5" />} label="Legendary" />}
+              {species.data?.is_mythical && <RarityBadge icon={<Star className="h-3.5 w-3.5" />} label="Mythical" />}
+              {species.data?.is_baby && <RarityBadge icon={<Sparkles className="h-3.5 w-3.5" />} label="Baby" />}
             </div>
 
             <div className="mt-5 flex items-center gap-2">
               <FavoriteButton id={pokemon.id} name={pokemon.name} size="md" />
+              {pokemon.cries?.latest && <CryButton src={pokemon.cries.latest} name={pokemon.name} />}
               <DexNav id={pokemon.id} />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Sections */}
-      <div className="mt-5 grid gap-5 lg:grid-cols-[1.1fr_1fr]">
-        <SectionCard title="Base stats" icon={<Zap className="h-4 w-4" />}>
-          <StatBars pokemon={pokemon} accent={cfg.color} />
-        </SectionCard>
+      {/* Pokédex entry */}
+      <PokedexEntry species={species.data} />
 
+      {/* Stats · Defenses · Profile · Abilities */}
+      <div className="grid gap-5 lg:grid-cols-[1.05fr_1fr]">
         <div className="flex flex-col gap-5">
-          <SectionCard title="Overview" icon={<Sparkles className="h-4 w-4" />}>
-            <div className="grid grid-cols-2 gap-3">
-              <InfoTile icon={<Ruler className="h-4 w-4" />} label="Height" value={formatHeight(pokemon.height)} />
-              <InfoTile icon={<Weight className="h-4 w-4" />} label="Weight" value={formatWeight(pokemon.weight)} />
-              <InfoTile
-                icon={<Zap className="h-4 w-4" />}
-                label="Base exp"
-                value={pokemon.base_experience?.toString() ?? '—'}
-              />
-              <InfoTile
-                icon={<Sparkles className="h-4 w-4" />}
-                label="Abilities"
-                value={abilities.length.toString()}
-              />
-            </div>
-
-            <div className="mt-4">
-              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
-                Abilities
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {abilities.map((a) => (
-                  <span
-                    key={a.ability.name}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3 py-1.5 text-sm font-medium capitalize text-ink"
-                  >
-                    {formatName(a.ability.name)}
-                    {a.is_hidden && (
-                      <span className="rounded bg-primary-soft px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase text-primary">
-                        Hidden
-                      </span>
-                    )}
-                  </span>
-                ))}
-              </div>
-            </div>
+          <SectionCard title="Base stats" icon={<Zap className="h-4 w-4" />}>
+            <StatBars pokemon={pokemon} accent={cfg.color} />
           </SectionCard>
-
-          <SectionCard title="Moves" icon={<Zap className="h-4 w-4" />} subtitle={`${pokemon.moves.length} total`}>
-            {moves.length === 0 ? (
-              <p className="text-sm text-muted">No move data available.</p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {moves.map((m) => (
-                  <span
-                    key={m.move.name}
-                    className="rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-xs font-medium capitalize text-ink-soft"
-                  >
-                    {formatName(m.move.name)}
-                  </span>
-                ))}
-                {pokemon.moves.length > moves.length && (
-                  <span className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-muted">
-                    +{pokemon.moves.length - moves.length} more
-                  </span>
-                )}
-              </div>
-            )}
-          </SectionCard>
+          <TypeDefenses effectiveness={effectiveness.data} isLoading={effectiveness.isLoading} />
+        </div>
+        <div className="flex flex-col gap-5">
+          <ProfilePanel pokemon={pokemon} species={species.data} />
+          <AbilitiesPanel pokemon={pokemon} details={abilities.byName} />
         </div>
       </div>
+
+      {/* Evolution */}
+      <EvolutionChain chain={evolution.data} isLoading={species.isLoading || evolution.isLoading} currentId={pokemon.id} />
+
+      {/* Moves */}
+      <MovesTable pokemon={pokemon} details={moves.byName} machineCount={machineCount} />
+
+      {/* Sprites */}
+      <SpriteGallery pokemon={pokemon} />
     </article>
   )
 }
 
-function SectionCard({
-  title,
-  subtitle,
-  icon,
-  children,
-}: {
-  title: string
-  subtitle?: string
-  icon: ReactNode
-  children: ReactNode
-}) {
+function RarityBadge({ icon, label }: { icon: ReactNode; label: string }) {
   return (
-    <section className="rounded-[var(--radius-card)] border border-border bg-surface p-6 shadow-[var(--shadow-sm)]">
-      <div className="mb-5 flex items-center justify-between">
-        <h3 className="flex items-center gap-2 text-base font-bold text-ink">
-          <span className="grid h-7 w-7 place-items-center rounded-lg bg-primary-soft text-primary">
-            {icon}
-          </span>
-          {title}
-        </h3>
-        {subtitle && <span className="text-xs font-medium text-muted">{subtitle}</span>}
-      </div>
-      {children}
-    </section>
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/25 px-3 py-1.5 text-sm font-semibold backdrop-blur-sm">
+      {icon}
+      {label}
+    </span>
   )
 }
 
-function InfoTile({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-border bg-surface-2 px-3.5 py-3">
-      <div className="flex items-center gap-1.5 text-muted">
-        {icon}
-        <span className="text-xs font-semibold uppercase tracking-wide">{label}</span>
-      </div>
-      <p className="tabular mt-1 text-lg font-bold text-ink">{value}</p>
-    </div>
-  )
-}
-
-/** Previous / next dex navigation. Wraps within the classic 1..1025 range. */
+/** Previous / next dex navigation. */
 function DexNav({ id }: { id: number }) {
   const prev = id > 1 ? id - 1 : null
   const next = id + 1

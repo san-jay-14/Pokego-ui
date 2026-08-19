@@ -88,6 +88,8 @@
 
   --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
   --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  /* Humanist face used on the trading cards — close to the real TCG typeface */
+  --font-card: 'Cabin', 'Gill Sans', 'Gill Sans MT', 'Segoe UI', sans-serif;
 
   --radius-card: 22px;
   --radius-control: 14px;
@@ -234,4 +236,51 @@
   .skeleton::after {
     display: none;
   }
+}
+
+/* ---------- Trading-card (holo / foil) ---------- */
+.tcg-card {
+  transform-style: preserve-3d;
+  will-change: transform;
+  transition: transform 0.18s var(--ease-smooth), box-shadow 0.3s ease;
+}
+
+/* Prismatic foil confined to the artwork frame so body text stays legible */
+.tcg-holo {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  background-image:
+    linear-gradient(
+      115deg,
+      transparent 24%,
+      rgba(255, 0, 140, 0.5) 39%,
+      rgba(255, 235, 0, 0.42) 46%,
+      rgba(0, 255, 170, 0.5) 53%,
+      rgba(0, 190, 255, 0.45) 60%,
+      rgba(180, 60, 255, 0.5) 67%,
+      transparent 82%
+    ),
+    repeating-linear-gradient(68deg, rgba(255, 255, 255, 0.08) 0 5px, transparent 5px 11px);
+  background-size: 220% 220%, auto;
+  background-position: var(--mx, 50%) var(--my, 50%), 0 0;
+  mix-blend-mode: color-dodge;
+  transition: opacity 0.3s ease;
+}
+
+/* Soft white glare that tracks the pointer across the whole card */
+.tcg-glare {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle at var(--mx, 50%) var(--my, 50%),
+    rgba(255, 255, 255, 0.55),
+    rgba(255, 255, 255, 0) 42%
+  );
+  mix-blend-mode: soft-light;
+  transition: opacity 0.3s ease;
 }

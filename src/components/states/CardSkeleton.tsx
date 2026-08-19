@@ -1,15 +1,19 @@
-/** Skeleton placeholder matching the PokemonCard footprint. */
+/** Skeleton placeholder matching the trading-card footprint. */
 export function CardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-sm)]">
-      <div className="flex aspect-square items-center justify-center p-6">
-        <div className="skeleton h-24 w-24 rounded-full" />
-      </div>
-      <div className="flex flex-col gap-2.5 px-4 pb-4 pt-1">
-        <div className="skeleton h-4 w-2/3 rounded-md" />
-        <div className="flex gap-1.5">
-          <div className="skeleton h-5 w-16 rounded-full" />
-          <div className="skeleton h-5 w-12 rounded-full" />
+    <div className="aspect-[63/88] overflow-hidden rounded-[6%] border border-border bg-surface p-[4.5%] shadow-[var(--shadow-sm)]">
+      <div className="flex h-full flex-col rounded-[4%] bg-surface-2 p-[6%]">
+        <div className="flex items-start justify-between">
+          <div className="skeleton h-3 w-1/2 rounded" />
+          <div className="skeleton h-3 w-8 rounded" />
+        </div>
+        <div className="skeleton mt-[6%] aspect-[1.5/1] w-full rounded-[3px]" />
+        <div className="skeleton mt-[6%] h-3 w-full rounded" />
+        <div className="skeleton mt-[6%] h-3 w-3/4 rounded" />
+        <div className="mt-auto flex justify-between gap-2">
+          <div className="skeleton h-4 w-1/4 rounded" />
+          <div className="skeleton h-4 w-1/4 rounded" />
+          <div className="skeleton h-4 w-1/4 rounded" />
         </div>
       </div>
     </div>

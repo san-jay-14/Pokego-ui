@@ -1,7 +1,12 @@
 import type {
+  AbilityDetail,
+  EvolutionChain,
+  MoveDetail,
   Pokemon,
   PokemonIndexEntry,
   PokemonListResponse,
+  PokemonSpecies,
+  TypeDetail,
   TypeResponse,
 } from '@/types/pokemon'
 
@@ -117,4 +122,39 @@ export async function fetchPokemonByType(
     .map((entry) => ({ name: entry.pokemon.name, id: idFromUrl(entry.pokemon.url) }))
     .filter((p) => p.id > 0 && p.id < 100000) // drop odd forms with huge synthetic ids
     .sort((a, b) => a.id - b.id)
+}
+
+/** Species-level "flavor" data (Pokédex text, breeding, classification). */
+export async function fetchPokemonSpecies(
+  nameOrId: string | number,
+  signal?: AbortSignal,
+): Promise<PokemonSpecies> {
+  const key = typeof nameOrId === 'string' ? slugify(nameOrId) : nameOrId
+  return request<PokemonSpecies>(`/pokemon-species/${key}`, signal)
+}
+
+/** Evolution chain, fetched by its absolute API url (from the species payload). */
+export async function fetchEvolutionChain(
+  url: string,
+  signal?: AbortSignal,
+): Promise<EvolutionChain> {
+  const path = url.replace(BASE_URL, '')
+  return request<EvolutionChain>(path, signal)
+}
+
+/** Full type detail, including the damage relations used for type effectiveness. */
+export async function fetchTypeDetail(type: string, signal?: AbortSignal): Promise<TypeDetail> {
+  return request<TypeDetail>(`/type/${slugify(type)}`, signal)
+}
+
+/** A single move's real battle data (power, accuracy, PP, class, effect). */
+export async function fetchMove(nameOrId: string | number, signal?: AbortSignal): Promise<MoveDetail> {
+  const key = typeof nameOrId === 'string' ? slugify(nameOrId) : nameOrId
+  return request<MoveDetail>(`/move/${key}`, signal)
+}
+
+/** A single ability's effect text. */
+export async function fetchAbility(nameOrId: string | number, signal?: AbortSignal): Promise<AbilityDetail> {
+  const key = typeof nameOrId === 'string' ? slugify(nameOrId) : nameOrId
+  return request<AbilityDetail>(`/ability/${key}`, signal)
 }

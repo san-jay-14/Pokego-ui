@@ -1,133 +1,306 @@
 import { memo } from 'react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Scale } from 'lucide-react'
+import { Heart, Scale } from 'lucide-react'
 import type { Pokemon } from '@/types/pokemon'
 import { getTypeConfig } from '@/constants/pokemonTypes'
-import { formatDexId, formatName, getArtwork, primaryType } from '@/utils/pokemon'
-import { TypeBadge } from './TypeBadge'
-import { FavoriteButton } from '@/components/favorites/FavoriteButton'
+import { getTypeBackground } from '@/constants/typeBackgrounds'
+import {
+  formatDexId,
+  formatHeightImperial,
+  formatName,
+  formatWeightImperial,
+  getArtwork,
+  getStat,
+  primaryType,
+} from '@/utils/pokemon'
+import { deriveAttacks, retreatCost, weaknessFor } from '@/utils/tcg'
+import { EnergyPip } from './EnergyPip'
 import { useAppStore } from '@/store/useAppStore'
+import { useHoloPointer } from '@/hooks/useHoloPointer'
 
 interface PokemonCardProps {
   pokemon: Pokemon
-  /** Stagger index for the entrance animation. */
   index?: number
 }
 
+const BORDER = '#0c0c0f' // outer card border — black for now
+const INK = '#ffffff'
+const MUTED = 'rgba(255,255,255,0.72)'
+const LINE = 'rgba(255,255,255,0.18)'
+const GLASS = 'rgba(10,12,18,0.42)'
+
 /**
- * The product's signature surface: a type-aura card with an oversized ghost
- * dex numeral, a watermark Pokéball, and artwork that lifts out on hover.
+ * Full-art card variant: the type scene fills the whole card, the Pokémon is
+ * composited on top, and every text zone lives in a translucent glass panel
+ * (frosted, so white text stays legible over any artwork).
  */
 export const PokemonCard = memo(function PokemonCard({ pokemon, index = 0 }: PokemonCardProps) {
-  const cfg = getTypeConfig(primaryType(pokemon))
+  const primary = primaryType(pokemon)
+  const cfg = getTypeConfig(primary)
+  const scene = getTypeBackground(primary)
+  const hp = getStat(pokemon, 'hp')
+  const attacks = deriveAttacks(pokemon)
+  const weak = weaknessFor(primary)
+  const retreat = retreatCost(pokemon.weight)
+  const holo = useHoloPointer()
+
+  const isFavorite = useAppStore((s) => s.favorites.includes(pokemon.id))
+  const toggleFavorite = useAppStore((s) => s.toggleFavorite)
   const isComparing = useAppStore((s) => s.compare.includes(pokemon.id))
   const toggleCompare = useAppStore((s) => s.toggleCompare)
 
   return (
-    <Link
-      to={`/pokemon/${pokemon.name}`}
-      aria-label={`${formatName(pokemon.name)}, ${formatDexId(pokemon.id)}`}
-      className="group animate-pop-in relative block overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-sm)] transition-[transform,box-shadow,border-color] duration-300 ease-[var(--ease-smooth)] hover:-translate-y-1.5 hover:shadow-[var(--shadow-lg)] focus-visible:-translate-y-1.5"
-      style={
-        {
-          animationDelay: `${Math.min(index, 12) * 35}ms`,
-          '--type': cfg.color,
-        } as CSSProperties
-      }
+    <div
+      className="group/card animate-pop-in relative [perspective:1000px]"
+      style={{ animationDelay: `${Math.min(index, 12) * 35}ms` }}
     >
-      {/* Type aura — radial glow, intensifies on hover */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-70 transition-opacity duration-300 group-hover:opacity-100"
-        style={{
-          background: `radial-gradient(120% 80% at 50% -10%, ${cfg.glow}, transparent 60%)`,
-        }}
-      />
-      {/* Bottom colour wash */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 opacity-25"
-        style={{
-          background: `linear-gradient(to top, ${cfg.from}, transparent)`,
-        }}
-      />
-      {/* Watermark Pokéball */}
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 100 100"
-        className="pointer-events-none absolute -right-6 -top-6 h-32 w-32 opacity-[0.07] transition-transform duration-500 ease-[var(--ease-smooth)] group-hover:rotate-45"
-        style={{ color: cfg.color }}
+      <Link
+        to={`/pokemon/${pokemon.name}`}
+        aria-label={`${formatName(pokemon.name)}, ${formatDexId(pokemon.id)}, ${cfg.label} type, ${hp} HP`}
+        onPointerMove={holo.onPointerMove}
+        onPointerLeave={holo.onPointerLeave}
+        style={{ ...holo.style, '--type': cfg.color } as CSSProperties}
+        className="tcg-card @container relative block aspect-[63/88] overflow-hidden rounded-[6%] shadow-[var(--shadow-md)] transition-shadow duration-300 hover:shadow-[var(--shadow-pop)] focus-visible:shadow-[var(--shadow-pop)]"
       >
-        <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="6" />
-        <path d="M4 50h30a16 16 0 0 1 32 0h30" fill="none" stroke="currentColor" strokeWidth="6" />
-        <circle cx="50" cy="50" r="10" fill="currentColor" />
-      </svg>
+        {/* Outer border (black) */}
+        <div className="absolute inset-0" style={{ background: BORDER }} />
 
-      {/* Ghost dex numeral */}
-      <span
-        aria-hidden="true"
-        className="tabular pointer-events-none absolute left-3 top-1 select-none text-5xl font-bold leading-none"
-        style={{ color: 'var(--ghost)' }}
-      >
-        {String(pokemon.id).padStart(3, '0')}
-      </span>
-
-      {/* Corner controls */}
-      <div className="absolute right-2.5 top-2.5 z-10 flex flex-col gap-1.5 opacity-90 transition-opacity group-hover:opacity-100">
-        <FavoriteButton id={pokemon.id} name={pokemon.name} />
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            toggleCompare(pokemon.id)
-          }}
-          aria-pressed={isComparing}
-          aria-label={isComparing ? `Remove ${pokemon.name} from compare` : `Add ${pokemon.name} to compare`}
-          className={`grid h-9 w-9 place-items-center rounded-full border backdrop-blur-sm transition-all duration-200 active:scale-90 ${
-            isComparing
-              ? 'border-transparent bg-primary text-primary-ink'
-              : 'border-border bg-surface/70 text-muted hover:text-primary hover:border-primary/40'
-          }`}
+        {/* Full-art body */}
+        <div
+          className="absolute inset-[3.5%] overflow-hidden rounded-[5%]"
+          style={{ fontFamily: 'var(--font-card)', color: INK }}
         >
-          <Scale className="h-[17px] w-[17px]" strokeWidth={2.2} />
-        </button>
-      </div>
+          {/* Scene / type background, full bleed */}
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage: scene
+                ? `url("${scene}")`
+                : `linear-gradient(158deg, ${cfg.from}, ${cfg.to})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          />
+          {/* Depth wash for legibility (top + bottom) */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(to bottom, rgba(0,0,0,0.28), transparent 22%, transparent 52%, rgba(0,0,0,0.4))',
+            }}
+          />
 
-      {/* Artwork */}
-      <div className="relative flex aspect-square items-center justify-center px-5 pt-6">
-        <img
-          src={getArtwork(pokemon)}
-          alt={formatName(pokemon.name)}
-          loading="lazy"
-          decoding="async"
-          draggable={false}
-          onError={(e) => {
-            e.currentTarget.onerror = null
-            e.currentTarget.src = '/pokeball.svg'
-            e.currentTarget.classList.add('opacity-30', 'p-6')
-          }}
-          className="h-full w-full object-contain drop-shadow-[0_10px_16px_rgba(0,0,0,0.18)] transition-transform duration-300 ease-[var(--ease-smooth)] group-hover:scale-110 group-hover:-rotate-2"
-        />
-      </div>
+          {/* Pokémon composited on the scene */}
+          <img
+            src={getArtwork(pokemon)}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+            onError={(e) => {
+              e.currentTarget.onerror = null
+              e.currentTarget.src = '/pokeball.svg'
+              e.currentTarget.classList.add('opacity-40')
+            }}
+            className="absolute inset-x-0 top-[10%] z-10 mx-auto h-[56%] w-[86%] object-contain transition-transform duration-300 ease-[var(--ease-smooth)]"
+            style={{
+              transform: `scale(${holo.active ? 1.06 : 1})`,
+              filter: 'drop-shadow(0 10px 12px rgba(0,0,0,0.45))',
+            }}
+          />
 
-      {/* Meta */}
-      <div className="relative flex flex-col gap-2 px-4 pb-4 pt-1">
-        <div className="flex items-baseline justify-between gap-2">
-          <h3 className="truncate text-base font-bold text-ink sm:text-lg">
-            {formatName(pokemon.name)}
-          </h3>
-          <span className="tabular shrink-0 text-xs font-semibold text-faint">
-            {formatDexId(pokemon.id)}
-          </span>
+          {/* Content — glass panels */}
+          <div className="relative z-20 flex h-full flex-col p-[5%]">
+            {/* Header */}
+            <div
+              className="flex items-center justify-between gap-1.5 rounded-[10px] border px-2.5 py-[6px]"
+              style={{ background: GLASS, borderColor: LINE, backdropFilter: 'blur(6px)' }}
+            >
+              <h3 className="min-w-0 flex-1 truncate font-bold leading-none" style={{ fontSize: 'clamp(11px, 6.4cqw, 18px)' }}>
+                {formatName(pokemon.name)}
+              </h3>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <span className="flex items-baseline gap-[2px] font-bold leading-none">
+                  <span style={{ color: MUTED, fontSize: 'clamp(5px, 2.6cqw, 8px)' }}>HP</span>
+                  <span style={{ fontSize: 'clamp(12px, 6.8cqw, 19px)' }}>{hp}</span>
+                </span>
+                <TypeChip type={primary} />
+              </div>
+            </div>
+
+            <div className="flex-1" />
+
+            {/* Bottom info panel */}
+            <div
+              className="rounded-[10px] border px-2.5 py-2"
+              style={{ background: GLASS, borderColor: LINE, backdropFilter: 'blur(6px)' }}
+            >
+              {/* Pokédex info bar */}
+              <div className="flex items-center gap-1.5">
+                <span className="tabular shrink-0 font-bold" style={{ fontSize: 'clamp(6px, 2.9cqw, 9px)' }}>
+                  NO. {String(pokemon.id).padStart(3, '0')}
+                </span>
+                <span className="truncate font-semibold" style={{ fontSize: 'clamp(6px, 2.9cqw, 9px)' }}>
+                  {cfg.label} Pokémon
+                </span>
+                <span
+                  className="tabular ml-auto hidden shrink-0 whitespace-nowrap @[150px]:block"
+                  style={{ color: MUTED, fontSize: 'clamp(6px, 2.7cqw, 9px)' }}
+                >
+                  HT: {formatHeightImperial(pokemon.height)} · WT: {formatWeightImperial(pokemon.weight)}
+                </span>
+              </div>
+
+              <div className="my-[5px] h-px" style={{ background: LINE }} />
+
+              {/* Attacks */}
+              <div className="flex flex-col gap-[3px]">
+                <AttackRow attack={attacks[0]} />
+                {attacks[1] && (
+                  <div className="hidden @[210px]:block">
+                    <AttackRow attack={attacks[1]} />
+                  </div>
+                )}
+              </div>
+
+              <div className="my-[5px] h-px" style={{ background: LINE }} />
+
+              {/* Weakness / Resistance / Retreat */}
+              <div className="grid grid-cols-3 gap-1">
+                <FooterCell label="Weakness">
+                  <EnergyPip type={weak} size={12} />
+                  <span className="tabular font-bold" style={{ fontSize: 'clamp(6px, 3cqw, 9px)' }}>
+                    ×2
+                  </span>
+                </FooterCell>
+                <FooterCell label="Resistance" borderColor={LINE}>
+                  <span style={{ color: MUTED, fontSize: 'clamp(7px, 3.4cqw, 11px)' }}>—</span>
+                </FooterCell>
+                <FooterCell label="Retreat">
+                  {Array.from({ length: retreat }).map((_, i) => (
+                    <EnergyPip key={i} type="colorless" size={11} />
+                  ))}
+                </FooterCell>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          {pokemon.types.map((t) => (
-            <TypeBadge key={t.type.name} type={t.type.name} />
-          ))}
-        </div>
+
+        {/* Pointer glare across the whole card */}
+        <div className="tcg-glare" style={{ opacity: holo.active ? 0.6 : 0 }} />
+      </Link>
+
+      {/* Floating controls */}
+      <div className="absolute right-[6%] top-[5.5%] z-30 flex gap-1 opacity-0 transition-opacity duration-200 focus-within:opacity-100 group-hover/card:opacity-100">
+        <CornerButton
+          active={isFavorite}
+          activeClass="bg-danger text-white"
+          label={isFavorite ? `Remove ${pokemon.name} from favourites` : `Add ${pokemon.name} to favourites`}
+          onClick={() => toggleFavorite(pokemon.id)}
+        >
+          <Heart className="h-[15px] w-[15px]" fill={isFavorite ? 'currentColor' : 'none'} strokeWidth={2.4} />
+        </CornerButton>
+        <CornerButton
+          active={isComparing}
+          activeClass="bg-primary text-primary-ink"
+          label={isComparing ? `Remove ${pokemon.name} from compare` : `Add ${pokemon.name} to compare`}
+          onClick={() => toggleCompare(pokemon.id)}
+        >
+          <Scale className="h-[15px] w-[15px]" strokeWidth={2.4} />
+        </CornerButton>
       </div>
-    </Link>
+    </div>
   )
 })
+
+/** Header type badge — a white pill with the type glyph + label in type colour. */
+function TypeChip({ type }: { type: string }) {
+  const cfg = getTypeConfig(type)
+  return (
+    <span
+      className="inline-flex shrink-0 items-center gap-1 rounded-full py-[2px] pl-[3px] pr-2 font-bold uppercase tracking-wide"
+      style={{ background: 'rgba(255,255,255,0.92)', fontSize: 'clamp(6px, 2.7cqw, 9px)' }}
+    >
+      <EnergyPip type={type} size={14} />
+      <span className="hidden @[168px]:inline" style={{ color: cfg.color }}>
+        {cfg.label}
+      </span>
+    </span>
+  )
+}
+
+function AttackRow({ attack }: { attack: ReturnType<typeof deriveAttacks>[number] }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="flex shrink-0 items-center gap-[2px]">
+        {attack.cost.map((c, i) => (
+          <EnergyPip key={i} type={c} size={13} />
+        ))}
+      </span>
+      <span className="min-w-0 flex-1 truncate font-bold" style={{ fontSize: 'clamp(9px, 4.4cqw, 13px)' }}>
+        {attack.name}
+      </span>
+      <span className="tabular shrink-0 font-bold" style={{ fontSize: 'clamp(10px, 5.2cqw, 16px)' }}>
+        {attack.damage}
+      </span>
+    </div>
+  )
+}
+
+function FooterCell({
+  label,
+  children,
+  borderColor,
+}: {
+  label: string
+  children: ReactNode
+  borderColor?: string
+}) {
+  return (
+    <div
+      className={`flex flex-col items-center gap-[2px] ${borderColor ? 'border-x px-1' : ''}`}
+      style={borderColor ? { borderColor } : undefined}
+    >
+      <span
+        className="font-semibold uppercase leading-none tracking-wide"
+        style={{ color: MUTED, fontSize: 'clamp(5px, 2.3cqw, 7px)' }}
+      >
+        {label}
+      </span>
+      <span className="flex items-center gap-[2px]">{children}</span>
+    </div>
+  )
+}
+
+function CornerButton({
+  active,
+  activeClass,
+  label,
+  onClick,
+  children,
+}: {
+  active: boolean
+  activeClass: string
+  label: string
+  onClick: () => void
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        onClick()
+      }}
+      aria-pressed={active}
+      aria-label={label}
+      className={`grid h-8 w-8 place-items-center rounded-full border border-white/20 shadow-md backdrop-blur-sm transition-all duration-200 active:scale-90 ${
+        active ? activeClass : 'bg-black/50 text-white hover:bg-black/65'
+      }`}
+    >
+      {children}
+    </button>
+  )
+}
