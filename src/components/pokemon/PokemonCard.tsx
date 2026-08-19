@@ -73,7 +73,7 @@ export const PokemonCard = memo(function PokemonCard({ pokemon, index = 0 }: Pok
         >
           {/* Scene / type background, full bleed */}
           <div
-            className="absolute inset-0 bg-cover bg-center"
+            className="absolute inset-0"
             style={{
               backgroundImage: scene
                 ? `url("${scene}")`

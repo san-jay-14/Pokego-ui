@@ -1,6 +1,7 @@
 import type {
   AbilityDetail,
   EvolutionChain,
+  LocationAreaEncounter,
   MoveDetail,
   Pokemon,
   PokemonIndexEntry,
@@ -157,4 +158,14 @@ export async function fetchMove(nameOrId: string | number, signal?: AbortSignal)
 export async function fetchAbility(nameOrId: string | number, signal?: AbortSignal): Promise<AbilityDetail> {
   const key = typeof nameOrId === 'string' ? slugify(nameOrId) : nameOrId
   return request<AbilityDetail>(`/ability/${key}`, signal)
+}
+
+/** Wild encounter locations for a Pokémon (may be an empty list). */
+export async function fetchEncounters(
+  nameOrId: string | number,
+  signal?: AbortSignal,
+): Promise<LocationAreaEncounter[]> {
+  const key = typeof nameOrId === 'string' ? slugify(nameOrId) : nameOrId
+  const data = await request<LocationAreaEncounter[]>(`/pokemon/${key}/encounters`, signal)
+  return Array.isArray(data) ? data : []
 }

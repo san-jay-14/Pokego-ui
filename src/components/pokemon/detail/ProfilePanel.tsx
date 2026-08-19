@@ -10,6 +10,20 @@ interface ProfilePanelProps {
   species: PokemonSpecies | undefined
 }
 
+/** The 10 Pokédex color categories → a representative swatch. */
+const POKEDEX_COLORS: Record<string, string> = {
+  black: '#3a3a44',
+  blue: '#4d90d6',
+  brown: '#b07a4a',
+  gray: '#9099a3',
+  green: '#4aa96c',
+  pink: '#f0a1c4',
+  purple: '#a462cf',
+  red: '#e5595b',
+  white: '#e9edf5',
+  yellow: '#e6c34a',
+}
+
 function evYield(pokemon: Pokemon): string {
   const yields = pokemon.stats
     .filter((s) => s.effort > 0)
@@ -30,6 +44,18 @@ export function ProfilePanel({ pokemon, species }: ProfilePanelProps) {
             <InfoTile label="Generation" value={genLabel(species.generation.name)} />
             <InfoTile label="Habitat" value={species.habitat ? formatName(species.habitat.name) : '—'} />
             <InfoTile label="Shape" value={species.shape ? formatName(species.shape.name) : '—'} />
+            <InfoTile
+              label="Color"
+              value={
+                <span className="flex items-center gap-2">
+                  <span
+                    className="h-4 w-4 rounded-full ring-1 ring-black/10"
+                    style={{ backgroundColor: POKEDEX_COLORS[species.color.name] ?? '#9099a3' }}
+                  />
+                  {formatName(species.color.name)}
+                </span>
+              }
+            />
           </>
         )}
       </div>

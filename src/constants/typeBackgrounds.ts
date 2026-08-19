@@ -11,6 +11,7 @@ const TYPE_BACKGROUNDS: Partial<Record<PokemonTypeName, string>> = {
   electric: "/type_bg/electric_bg.webp",
   water: "/type_bg/water_bg.webp",
   fire: "/type_bg/fire_bg.webp",
+  bug: "/type_bg/bug_bg.webp",
 };
 
 export function getTypeBackground(type: string): string | null {

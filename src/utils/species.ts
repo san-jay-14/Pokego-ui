@@ -1,4 +1,4 @@
-import type { EvolutionDetail, Pokemon, PokemonSpecies } from '@/types/pokemon'
+import type { EvolutionDetail, MoveDetail, Pokemon, PokemonSpecies } from '@/types/pokemon'
 import { formatName } from '@/utils/pokemon'
 
 /** English genus, e.g. "Seed Pokémon". Falls back gracefully. */
@@ -33,33 +33,69 @@ export function captureChancePct(rate: number): number {
   return Math.round((rate / 255) * 100)
 }
 
-export interface LevelUpMove {
+export type LearnMethod = 'level-up' | 'machine' | 'egg' | 'tutor'
+
+export interface LearnMove {
   name: string
-  level: number
+  /** Level for level-up moves; null for TM/egg/tutor. */
+  level: number | null
 }
 
-/**
- * Level-up learnset: for each move, the lowest level at which it's learned by
- * level-up (across version groups), sorted by level then name.
- */
-export function getLevelUpMoves(pokemon: Pokemon): LevelUpMove[] {
-  const moves: LevelUpMove[] = []
+/** Moves a Pokémon learns by a given method, de-duped and sorted sensibly. */
+export function getMovesByMethod(pokemon: Pokemon, method: LearnMethod): LearnMove[] {
+  const moves: LearnMove[] = []
   for (const slot of pokemon.moves) {
-    const levels = slot.version_group_details
-      .filter((d) => d.move_learn_method.name === 'level-up' && d.level_learned_at > 0)
-      .map((d) => d.level_learned_at)
-    if (levels.length > 0) {
-      moves.push({ name: slot.move.name, level: Math.min(...levels) })
+    const details = slot.version_group_details.filter((d) => d.move_learn_method.name === method)
+    if (details.length === 0) continue
+    if (method === 'level-up') {
+      const levels = details.map((d) => d.level_learned_at).filter((l) => l > 0)
+      moves.push({ name: slot.move.name, level: levels.length ? Math.min(...levels) : 0 })
+    } else {
+      moves.push({ name: slot.move.name, level: null })
     }
   }
-  return moves.sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
+  if (method === 'level-up') {
+    moves.sort((a, b) => (a.level ?? 0) - (b.level ?? 0) || a.name.localeCompare(b.name))
+  } else {
+    moves.sort((a, b) => a.name.localeCompare(b.name))
+  }
+  return moves
 }
 
-/** Count of moves learned by TM/HM (machine) — shown as a summary figure. */
-export function countMachineMoves(pokemon: Pokemon): number {
-  return pokemon.moves.filter((s) =>
-    s.version_group_details.some((d) => d.move_learn_method.name === 'machine'),
-  ).length
+/** English short-effect text for a move, cleaned of whitespace. */
+export function moveShortEffect(detail: MoveDetail | undefined): string {
+  const entry = detail?.effect_entries.find((e) => e.language.name === 'en')
+  return entry?.short_effect.replace(/\s+/g, ' ').trim() ?? ''
+}
+
+/** Form label relative to the base species, e.g. "charizard-mega-x" → "Mega X". */
+export function formatFormLabel(name: string, baseName: string): string {
+  if (name === baseName) return 'Default'
+  const suffix = name.startsWith(`${baseName}-`) ? name.slice(baseName.length + 1) : name
+  const map: Record<string, string> = { gmax: 'Gigantamax', 'mega-x': 'Mega X', 'mega-y': 'Mega Y', mega: 'Mega' }
+  return map[suffix] ?? formatName(suffix)
+}
+
+/** Language codes we surface for localized names, with display labels. */
+export const LOCALIZED_LANGUAGES: { code: string; label: string }[] = [
+  { code: 'ja-hrkt', label: 'Japanese' },
+  { code: 'ja-roma', label: 'Rōmaji' },
+  { code: 'ko', label: 'Korean' },
+  { code: 'zh-hant', label: 'Chinese' },
+  { code: 'fr', label: 'French' },
+  { code: 'de', label: 'German' },
+  { code: 'es', label: 'Spanish' },
+  { code: 'it', label: 'Italian' },
+]
+
+/** "kanto-route-3-area" → "Kanto Route 3". */
+export function formatLocationArea(name: string): string {
+  return formatName(name.replace(/-area$/, ''))
+}
+
+/** "original-johto" → "Johto"; "national" → "National". */
+export function formatPokedexName(name: string): string {
+  return formatName(name.replace(/^original-|-old$|updated-/g, ''))
 }
 
 /** Human-readable evolution trigger, e.g. "Lv. 16", "Use Fire Stone", "Trade". */

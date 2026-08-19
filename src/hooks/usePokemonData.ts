@@ -2,6 +2,7 @@ import { useQueries, useQuery } from '@tanstack/react-query'
 import {
   fetchAbility,
   fetchAllPokemonIndex,
+  fetchEncounters,
   fetchEvolutionChain,
   fetchMove,
   fetchPokemon,
@@ -28,6 +29,7 @@ export const pokemonKeys = {
   typeDetail: (type: string) => ['type', 'detail', type] as const,
   move: (name: string) => ['move', name] as const,
   ability: (name: string) => ['ability', name] as const,
+  encounters: (nameOrId: string | number) => ['pokemon', 'encounters', String(nameOrId)] as const,
 }
 
 /** The full lightweight dex index (name + id), fetched once per session. */
@@ -151,6 +153,16 @@ export function useMoveDetails(names: string[]) {
     if (r.data) byName.set(r.data.name, r.data)
   })
   return { byName, isLoading: results.some((r) => r.isLoading) }
+}
+
+/** Wild encounter locations for a Pokémon. */
+export function useEncounters(nameOrId: string | number | undefined) {
+  return useQuery({
+    queryKey: pokemonKeys.encounters(nameOrId ?? ''),
+    queryFn: ({ signal }) => fetchEncounters(nameOrId as string | number, signal),
+    enabled: nameOrId != null && nameOrId !== '',
+    staleTime: Infinity,
+  })
 }
 
 /** Batch ability details (effect text). */

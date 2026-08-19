@@ -99,6 +99,21 @@ export interface Genus {
   language: NamedAPIResource
 }
 
+export interface SpeciesName {
+  name: string
+  language: NamedAPIResource
+}
+
+export interface PokedexNumber {
+  entry_number: number
+  pokedex: NamedAPIResource
+}
+
+export interface PokemonVariety {
+  is_default: boolean
+  pokemon: NamedAPIResource
+}
+
 export interface PokemonSpecies {
   id: number
   name: string
@@ -119,6 +134,26 @@ export interface PokemonSpecies {
   gender_rate: number // -1 genderless; else eighths female
   egg_groups: NamedAPIResource[]
   hatch_counter: number | null
+  names: SpeciesName[]
+  pokedex_numbers: PokedexNumber[]
+  varieties: PokemonVariety[]
+}
+
+/** GET /pokemon/{id}/encounters */
+export interface EncounterVersionDetail {
+  version: NamedAPIResource
+  max_chance: number
+  encounter_details: {
+    min_level: number
+    max_level: number
+    chance: number
+    method: NamedAPIResource
+  }[]
+}
+
+export interface LocationAreaEncounter {
+  location_area: NamedAPIResource
+  version_details: EncounterVersionDetail[]
 }
 
 /** GET /evolution-chain/{id} */

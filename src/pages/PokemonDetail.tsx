@@ -1,19 +1,19 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ChevronLeft, ChevronRight, Crown, Sparkles, Star, Zap } from 'lucide-react'
 import type { Pokemon } from '@/types/pokemon'
 import {
   useAbilityDetails,
+  useEncounters,
   useEvolutionChain,
-  useMoveDetails,
   usePokemonDetail,
   usePokemonSpecies,
   useTypeEffectiveness,
 } from '@/hooks/usePokemonData'
 import { getTypeConfig } from '@/constants/pokemonTypes'
 import { formatDexId, formatName, getArtwork, primaryType } from '@/utils/pokemon'
-import { countMachineMoves, getGenus, getLevelUpMoves } from '@/utils/species'
+import { getGenus } from '@/utils/species'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { StatBars } from '@/components/pokemon/StatBars'
 import { FavoriteButton } from '@/components/favorites/FavoriteButton'
@@ -27,9 +27,12 @@ import { ProfilePanel } from '@/components/pokemon/detail/ProfilePanel'
 import { TypeDefenses } from '@/components/pokemon/detail/TypeDefenses'
 import { AbilitiesPanel } from '@/components/pokemon/detail/AbilitiesPanel'
 import { EvolutionChain } from '@/components/pokemon/detail/EvolutionChain'
-import { MovesTable } from '@/components/pokemon/detail/MovesTable'
+import { MovesPanel } from '@/components/pokemon/detail/MovesPanel'
 import { SpriteGallery } from '@/components/pokemon/detail/SpriteGallery'
 import { CryButton } from '@/components/pokemon/detail/CryButton'
+import { FormsSwitcher } from '@/components/pokemon/detail/FormsSwitcher'
+import { NamesPanel } from '@/components/pokemon/detail/NamesPanel'
+import { EncountersPanel } from '@/components/pokemon/detail/EncountersPanel'
 
 export function PokemonDetail() {
   const { name } = useParams<{ name: string }>()
@@ -63,27 +66,28 @@ export function PokemonDetail() {
         </div>
       )}
 
-      {data && !isLoading && <DetailContent pokemon={data} />}
+      {data && !isLoading && <DetailContent key={data.id} base={data} />}
     </PageContainer>
   )
 }
 
-function DetailContent({ pokemon }: { pokemon: Pokemon }) {
-  const cfg = getTypeConfig(primaryType(pokemon))
+function DetailContent({ base }: { base: Pokemon }) {
+  const [formName, setFormName] = useState(base.name)
 
-  const species = usePokemonSpecies(pokemon.id)
+  const species = usePokemonSpecies(base.id)
+  const formQuery = usePokemonDetail(formName)
+  const active = formQuery.data ?? base // the currently-selected form
+
+  const cfg = getTypeConfig(primaryType(active))
   const evolution = useEvolutionChain(species.data?.evolution_chain.url)
 
-  const typeNames = useMemo(() => pokemon.types.map((t) => t.type.name), [pokemon])
+  const typeNames = useMemo(() => active.types.map((t) => t.type.name), [active])
   const effectiveness = useTypeEffectiveness(typeNames)
 
-  const abilityNames = useMemo(() => pokemon.abilities.map((a) => a.ability.name), [pokemon])
+  const abilityNames = useMemo(() => active.abilities.map((a) => a.ability.name), [active])
   const abilities = useAbilityDetails(abilityNames)
 
-  const moveNames = useMemo(() => getLevelUpMoves(pokemon).map((m) => m.name), [pokemon])
-  const moves = useMoveDetails(moveNames)
-  const machineCount = useMemo(() => countMachineMoves(pokemon), [pokemon])
-
+  const encounters = useEncounters(active.id)
   const genus = species.data ? getGenus(species.data) : undefined
 
   return (
@@ -100,15 +104,15 @@ function DetailContent({ pokemon }: { pokemon: Pokemon }) {
           <circle cx="50" cy="50" r="11" fill="white" />
         </svg>
         <span aria-hidden="true" className="tabular pointer-events-none absolute -bottom-6 right-4 select-none text-[9rem] font-bold leading-none text-white/10">
-          {String(pokemon.id).padStart(3, '0')}
+          {String(base.id).padStart(3, '0')}
         </span>
 
         <div className="relative flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:gap-10">
           <div className="relative shrink-0">
             <div className="absolute inset-0 -z-10 rounded-full blur-2xl" style={{ background: 'rgba(255,255,255,0.35)' }} />
             <img
-              src={getArtwork(pokemon)}
-              alt={formatName(pokemon.name)}
+              src={getArtwork(active)}
+              alt={formatName(active.name)}
               onError={(e) => {
                 e.currentTarget.onerror = null
                 e.currentTarget.src = '/pokeball.svg'
@@ -121,13 +125,13 @@ function DetailContent({ pokemon }: { pokemon: Pokemon }) {
 
           <div className="flex flex-1 flex-col items-center text-center sm:items-start sm:text-left" style={{ textShadow: '0 2px 14px rgba(0,0,0,0.35)' }}>
             <span className="tabular text-sm font-bold uppercase tracking-[0.2em] text-white/80">
-              {formatDexId(pokemon.id)}
+              {formatDexId(base.id)}
             </span>
-            <h1 className="mt-1 text-4xl font-bold tracking-tight sm:text-5xl">{formatName(pokemon.name)}</h1>
+            <h1 className="mt-1 text-4xl font-bold tracking-tight sm:text-5xl">{formatName(active.name)}</h1>
             {genus && <p className="mt-1 text-sm font-semibold text-white/85">{genus}</p>}
 
             <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-              {pokemon.types.map((t) => (
+              {active.types.map((t) => (
                 <span key={t.type.name} className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3.5 py-1.5 text-sm font-semibold backdrop-blur-sm">
                   <span aria-hidden="true">{getTypeConfig(t.type.name).emoji}</span>
                   {getTypeConfig(t.type.name).label}
@@ -139,13 +143,18 @@ function DetailContent({ pokemon }: { pokemon: Pokemon }) {
             </div>
 
             <div className="mt-5 flex items-center gap-2">
-              <FavoriteButton id={pokemon.id} name={pokemon.name} size="md" />
-              {pokemon.cries?.latest && <CryButton src={pokemon.cries.latest} name={pokemon.name} />}
-              <DexNav id={pokemon.id} />
+              <FavoriteButton id={base.id} name={base.name} size="md" />
+              {active.cries?.latest && <CryButton src={active.cries.latest} name={active.name} />}
+              <DexNav id={base.id} />
             </div>
           </div>
         </div>
       </section>
+
+      {/* Forms */}
+      {species.data && (
+        <FormsSwitcher varieties={species.data.varieties} baseName={base.name} active={formName} onSelect={setFormName} />
+      )}
 
       {/* Pokédex entry */}
       <PokedexEntry species={species.data} />
@@ -154,24 +163,30 @@ function DetailContent({ pokemon }: { pokemon: Pokemon }) {
       <div className="grid gap-5 lg:grid-cols-[1.05fr_1fr]">
         <div className="flex flex-col gap-5">
           <SectionCard title="Base stats" icon={<Zap className="h-4 w-4" />}>
-            <StatBars pokemon={pokemon} accent={cfg.color} />
+            <StatBars pokemon={active} accent={cfg.color} />
           </SectionCard>
           <TypeDefenses effectiveness={effectiveness.data} isLoading={effectiveness.isLoading} />
         </div>
         <div className="flex flex-col gap-5">
-          <ProfilePanel pokemon={pokemon} species={species.data} />
-          <AbilitiesPanel pokemon={pokemon} details={abilities.byName} />
+          <ProfilePanel pokemon={active} species={species.data} />
+          <AbilitiesPanel pokemon={active} details={abilities.byName} />
         </div>
       </div>
 
+      {/* Locations · Names */}
+      <div className="grid gap-5 lg:grid-cols-2">
+        <EncountersPanel encounters={encounters.data} isLoading={encounters.isLoading} />
+        <NamesPanel species={species.data} />
+      </div>
+
       {/* Evolution */}
-      <EvolutionChain chain={evolution.data} isLoading={species.isLoading || evolution.isLoading} currentId={pokemon.id} />
+      <EvolutionChain chain={evolution.data} isLoading={species.isLoading || evolution.isLoading} currentId={base.id} />
 
       {/* Moves */}
-      <MovesTable pokemon={pokemon} details={moves.byName} machineCount={machineCount} />
+      <MovesPanel pokemon={active} />
 
       {/* Sprites */}
-      <SpriteGallery pokemon={pokemon} />
+      <SpriteGallery pokemon={active} />
     </article>
   )
 }
