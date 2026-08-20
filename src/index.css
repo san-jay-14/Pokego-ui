@@ -22,11 +22,11 @@
   --faint: #aab2c6;
   --ghost: rgba(20, 22, 29, 0.05);
 
-  /* Brand accent — deep royal indigo, used with restraint */
-  --primary: #3d5af1;
+  /* Brand accent — Pokémon red, used with restraint */
+  --primary: #e02b2b;
   --primary-ink: #ffffff;
-  --primary-soft: #eaeeff;
-  --focus: #3d5af1;
+  --primary-soft: #fdeceb;
+  --focus: #e02b2b;
 
   --success: #17a673;
   --warning: #e0a416;
@@ -53,10 +53,10 @@
   --faint: #4a5266;
   --ghost: rgba(255, 255, 255, 0.045);
 
-  --primary: #6d83ff;
-  --primary-ink: #0b0d12;
-  --primary-soft: #1c2340;
-  --focus: #8b9bff;
+  --primary: #ff4136;
+  --primary-ink: #ffffff;
+  --primary-soft: #3a1210;
+  --focus: #ff6b61;
 
   --success: #34d399;
   --warning: #f5c451;
@@ -512,7 +512,7 @@
    device's round controls, with a double outer ring. */
 .chrome-btn {
   position: relative;
-  background: radial-gradient(circle farthest-corner at 40% 25%, #dceef1 9%, #7cd6e8 20%, #405aa5 62%, #2b7dc4 100%);
+  background: radial-gradient(circle farthest-corner at 40% 25%, #fbe4e0 9%, #f2938a 20%, #b8342f 62%, #8a1d1d 100%);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 .chrome-btn::after {
@@ -661,6 +661,28 @@
   .pokedex-swing[data-closing] .pokedex-flap {
     animation: modal-fade-out 0.24s var(--ease-smooth) both;
   }
+}
+
+/* ============================================================
+   Battlefield — diagonally split head-to-head arena.
+   ============================================================ */
+.battle-hero {
+  background: var(--surface);
+}
+/* The hatched seam band dividing the two fighters. */
+.battle-seam {
+  background: repeating-linear-gradient(
+    118deg,
+    rgba(255, 255, 255, 0.3) 0 5px,
+    rgba(0, 0, 0, 0.34) 5px 10px
+  );
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.35),
+    inset -1px 0 0 rgba(0, 0, 0, 0.35);
+}
+/* Animated Showdown GIFs scale crisply and cast a grounded shadow. */
+.battle-sprite {
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.4));
 }
 
 /* Skeleton shimmer */

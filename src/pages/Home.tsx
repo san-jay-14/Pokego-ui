@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { Outlet } from "react-router-dom";
 import { Heart } from "lucide-react";
+import { HeroDock } from "@/components/layout/HeroDock";
 import {
   usePokemonIndex,
   usePokemonDetails,
@@ -30,7 +31,6 @@ import { CardSkeletonGrid } from "@/components/states/CardSkeleton";
 import { ErrorState } from "@/components/states/ErrorState";
 import { EmptyState } from "@/components/states/EmptyState";
 import { Button } from "@/components/ui/Button";
-import { PokeballIcon } from "@/components/ui/PokeballIcon";
 import { PokeballSpinner } from "@/components/ui/PokeballSpinner";
 
 const PAGE_SIZE = 20;
@@ -163,7 +163,6 @@ export function Home() {
           setDirection((d) => (d === "asc" ? "desc" : "asc"))
         }
         favoritesOnly={favoritesOnly}
-        favoritesCount={favorites.length}
         onToggleFavorites={toggleFavoritesOnly}
         resultCount={filteredEntries.length}
         showCount={!initialLoading}
@@ -182,7 +181,7 @@ export function Home() {
         onToggleFavorites={toggleFavoritesOnly}
       />
 
-      <PageContainer className="pb-28 pt-6">
+      <PageContainer id="pokedex-grid" className="pb-28 pt-6">
         {/* Body */}
         {index.isError ? (
           <ErrorState error={index.error} onRetry={() => index.refetch()} />
@@ -244,7 +243,6 @@ interface HeroProps {
   onSortKeyChange: (key: SortKey) => void;
   onDirectionToggle: () => void;
   favoritesOnly: boolean;
-  favoritesCount: number;
   onToggleFavorites: () => void;
   resultCount: number;
   showCount: boolean;
@@ -263,7 +261,6 @@ function Hero({
   onSortKeyChange,
   onDirectionToggle,
   favoritesOnly,
-  favoritesCount,
   onToggleFavorites,
   resultCount,
   showCount,
@@ -283,13 +280,8 @@ function Hero({
 
       <PageContainer className="pb-6 pt-6 sm:pt-8">
         <div className="mx-auto max-w-3xl">
-          <div className="flex items-center justify-between">
-            <PokeballIcon size={36} className="drop-shadow-sm" />
-            <QuickActions
-              favoritesOnly={favoritesOnly}
-              favoritesCount={favoritesCount}
-              onToggleFavorites={onToggleFavorites}
-            />
+          <div className="flex items-center justify-center">
+            <HeroDock favoritesOnly={favoritesOnly} onToggleFavorites={onToggleFavorites} />
           </div>
 
           <div className="mt-5 text-center">

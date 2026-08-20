@@ -4,6 +4,7 @@ import { ScrollToTop } from '@/components/layout/ScrollToTop'
 import { CompareTray } from '@/components/compare/CompareTray'
 import { Home } from '@/pages/Home'
 import { PokedexModal } from '@/components/pokemon/detail/PokedexModal'
+import { Battlefield } from '@/pages/Battlefield'
 import { NotFound } from '@/pages/NotFound'
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
                 the grid with the Pokédex open on top. */}
             <Route path="pokemon/:name" element={<PokedexModal />} />
           </Route>
+          <Route path="/battlefield" element={<Battlefield />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

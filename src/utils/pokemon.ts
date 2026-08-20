@@ -57,6 +57,19 @@ export function artworkFromId(id: number): string {
   return `${ARTWORK_CDN}/${id}.png`
 }
 
+/**
+ * Animated battle sprite (Showdown gen-5 style GIF) when the API has one,
+ * falling back to the static official artwork. Used on the Battlefield.
+ */
+export function getAnimatedSprite(pokemon: Pokemon): string {
+  return pokemon.sprites.other?.showdown?.front_default ?? getArtwork(pokemon)
+}
+
+/** Whether a Pokémon has a true animated Showdown sprite (drives crisp scaling). */
+export function hasAnimatedSprite(pokemon: Pokemon): boolean {
+  return Boolean(pokemon.sprites.other?.showdown?.front_default)
+}
+
 /** The primary type slug drives a card / hero's aura colour. */
 export function primaryType(pokemon: Pokemon): string {
   return pokemon.types[0]?.type.name ?? 'normal'
