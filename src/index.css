@@ -565,6 +565,54 @@
 }
 
 /* ============================================================
+   Home hero — dramatic full-bleed art with a theme-aware
+   center "spotlight" scrim so the wordmark, copy and search
+   controls stay crisp over the busy background.
+   ============================================================ */
+.hero-scrim {
+  background: radial-gradient(
+    64% 82% at 50% 44%,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.86) 30%,
+    rgba(255, 255, 255, 0.5) 56%,
+    rgba(255, 255, 255, 0) 78%
+  );
+}
+.dark .hero-scrim {
+  background: radial-gradient(
+    64% 82% at 50% 44%,
+    rgba(8, 10, 15, 0.93) 0%,
+    rgba(8, 10, 15, 0.82) 30%,
+    rgba(8, 10, 15, 0.46) 56%,
+    rgba(8, 10, 15, 0) 78%
+  );
+}
+/* Staggered rise for the hero's stacked content. */
+.hero-rise {
+  animation: float-in 0.6s var(--ease-smooth) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-rise {
+    animation: none;
+  }
+}
+
+/* Popover panels (type grid, sort menu). */
+@keyframes dropdown-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-dropdown {
+  transform-origin: top center;
+  animation: dropdown-in 0.14s var(--ease-smooth) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-dropdown {
+    animation: none;
+  }
+}
+
+/* ============================================================
    Pokédex modal — the device rises in and the right leaf swings
    open on the hinge like a book; on close the lid swings shut and
    the whole device drops away before it navigates home.
@@ -669,16 +717,9 @@
 .battle-hero {
   background: var(--surface);
 }
-/* The hatched seam band dividing the two fighters. */
+/* The solid seam band dividing the two fighters. */
 .battle-seam {
-  background: repeating-linear-gradient(
-    118deg,
-    rgba(255, 255, 255, 0.3) 0 5px,
-    rgba(0, 0, 0, 0.34) 5px 10px
-  );
-  box-shadow:
-    inset 1px 0 0 rgba(255, 255, 255, 0.35),
-    inset -1px 0 0 rgba(0, 0, 0, 0.35);
+  background: #000;
 }
 /* Animated Showdown GIFs scale crisply and cast a grounded shadow. */
 .battle-sprite {

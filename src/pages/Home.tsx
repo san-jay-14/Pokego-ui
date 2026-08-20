@@ -153,7 +153,6 @@ export function Home() {
         search={search}
         onSearch={setSearch}
         searching={searching}
-        totalIndexed={index.data?.length ?? 0}
         type={type}
         onTypeChange={setType}
         sortKey={sortKey}
@@ -235,7 +234,6 @@ interface HeroProps {
   search: string;
   onSearch: (v: string) => void;
   searching: boolean;
-  totalIndexed: number;
   type: TypeFilterValue;
   onTypeChange: (v: TypeFilterValue) => void;
   sortKey: SortKey;
@@ -253,7 +251,6 @@ function Hero({
   search,
   onSearch,
   searching,
-  totalIndexed,
   type,
   onTypeChange,
   sortKey,
@@ -267,43 +264,34 @@ function Hero({
   sentinelRef,
 }: HeroProps) {
   return (
-    <section className="relative overflow-hidden border-b border-border">
-      {/* Background — placeholder gradient today; drop a real photo at /hero-bg.jpg to swap it in */}
+    <section className="relative flex min-h-[440px] flex-col overflow-hidden border-b border-border sm:min-h-[500px]">
+      {/* Full-bleed art + theme-aware center spotlight so content stays legible */}
       <div className="absolute inset-0 -z-10">
-        {/* <div className="absolute inset-0 bg-gradient-to-br from-primary-soft via-bg to-bg" /> */}
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: "url('/hero_bg.jpg')" }}
         />
-        {/* <div className="absolute inset-0 bg-bg/80 backdrop-blur-[2px]" /> */}
+        <div className="hero-scrim absolute inset-0" aria-hidden="true" />
       </div>
 
-      <PageContainer className="pb-6 pt-6 sm:pt-8">
-        <div className="mx-auto max-w-3xl">
-          <div className="flex items-center justify-center">
-            <HeroDock favoritesOnly={favoritesOnly} onToggleFavorites={onToggleFavorites} />
-          </div>
+      <PageContainer className="flex flex-1 flex-col pb-9 pt-6 sm:pb-11 sm:pt-8">
+        <div className="flex items-center justify-center">
+          <HeroDock favoritesOnly={favoritesOnly} onToggleFavorites={onToggleFavorites} />
+        </div>
 
-          <div className="mt-5 text-center">
-            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/70 px-3.5 py-1.5 text-xs font-semibold text-muted backdrop-blur-sm">
-              <span className="h-1.5 w-1.5 rounded-full bg-success" />
-              {totalIndexed > 0
-                ? `${totalIndexed.toLocaleString()} Pokémon indexed`
-                : "Live PokéAPI data"}
-            </span>
-            <h1 className="mt-4 text-4xl font-bold leading-[1.05] tracking-tight text-ink sm:text-5xl md:text-6xl">
-              Explore the{" "}
-              <span className="bg-gradient-to-r from-primary to-[#8b5cf6] bg-clip-text text-transparent">
-                Pokédex
-              </span>
-            </h1>
-            <p className="mx-auto mt-3 max-w-md text-base text-muted sm:text-lg">
+        <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center">
+          <div className="hero-rise text-center" style={{ animationDelay: "60ms" }}>
+            <HeroTitle />
+            <p className="mx-auto mt-4 max-w-md text-base font-medium text-ink-soft sm:text-lg">
               Search, filter and compare every Pokémon — stats, types, abilities
               and moves, in one fast field guide.
             </p>
           </div>
 
-          <div className="mx-auto mt-6 max-w-xl">
+          <div
+            className="hero-rise mx-auto mt-7 w-full max-w-xl sm:mt-8"
+            style={{ animationDelay: "140ms" }}
+          >
             <FilterBar
               search={search}
               onSearch={onSearch}
@@ -321,7 +309,7 @@ function Hero({
               />
               {showCount && (
                 <p
-                  className="tabular text-sm font-medium text-muted"
+                  className="tabular text-sm font-semibold text-ink-soft"
                   aria-live="polite"
                 >
                   {resultCount.toLocaleString()} Pokémon
@@ -339,6 +327,32 @@ function Hero({
         aria-hidden="true"
       />
     </section>
+  );
+}
+
+/**
+ * The hero wordmark — the Pokéxplore brand logo. Falls back to a styled text
+ * wordmark if the asset is ever missing.
+ */
+function HeroTitle() {
+  const [logoFailed, setLogoFailed] = useState(false);
+  if (logoFailed) {
+    return (
+      <h1 className="font-display text-4xl font-black leading-none tracking-tight text-ink sm:text-5xl md:text-6xl">
+        Poké<span className="text-primary">xplore</span>
+      </h1>
+    );
+  }
+  return (
+    <h1 className="flex justify-center">
+      <img
+        src="/Pokexplore_logo.png"
+        alt="Pokéxplore"
+        draggable={false}
+        onError={() => setLogoFailed(true)}
+        className="h-16 w-auto object-contain drop-shadow-[0_4px_14px_rgba(0,0,0,0.3)] sm:h-20 md:h-24"
+      />
+    </h1>
   );
 }
 

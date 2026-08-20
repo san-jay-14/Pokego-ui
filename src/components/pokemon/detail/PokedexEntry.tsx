@@ -1,4 +1,4 @@
-import { BookOpen } from 'lucide-react'
+import { BookOpen, ScanLine } from 'lucide-react'
 import type { PokemonSpecies } from '@/types/pokemon'
 import { getFlavorText } from '@/utils/species'
 import { LcdScreen } from './device/LcdScreen'
@@ -14,7 +14,26 @@ export function PokedexEntry({ species }: { species: PokemonSpecies | undefined 
     )
   }
   const text = getFlavorText(species)
-  if (!text) return null
+  if (!text) {
+    return (
+      <LcdScreen className="px-4 py-2 sm:px-5">
+        <div
+          className="mb-0.5 flex items-center gap-1.5 text-[0.62rem] uppercase tracking-[0.2em] opacity-70"
+          style={{ fontFamily: 'var(--font-lcd)' }}
+        >
+          <BookOpen className="h-3 w-3" />
+          Dex Entry
+        </div>
+        <p
+          className="flex items-center gap-1.5 text-base leading-snug opacity-70"
+          style={{ fontFamily: 'var(--font-lcd)' }}
+        >
+          <ScanLine className="h-3.5 w-3.5 shrink-0" />
+          No entry detected.
+        </p>
+      </LcdScreen>
+    )
+  }
 
   return (
     <LcdScreen className="px-4 py-2 sm:px-5">
