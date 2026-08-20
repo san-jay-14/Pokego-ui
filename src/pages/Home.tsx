@@ -276,11 +276,17 @@ function Hero({
 
       <PageContainer className="flex flex-1 flex-col pb-9 pt-6 sm:pb-11 sm:pt-8">
         <div className="flex items-center justify-center">
-          <HeroDock favoritesOnly={favoritesOnly} onToggleFavorites={onToggleFavorites} />
+          <HeroDock
+            favoritesOnly={favoritesOnly}
+            onToggleFavorites={onToggleFavorites}
+          />
         </div>
 
         <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center">
-          <div className="hero-rise text-center" style={{ animationDelay: "60ms" }}>
+          <div
+            className="hero-rise text-center"
+            style={{ animationDelay: "60ms" }}
+          >
             <HeroTitle />
             <p className="mx-auto mt-4 max-w-md text-base font-medium text-ink-soft sm:text-lg">
               Search, filter and compare every Pokémon — stats, types, abilities
@@ -350,7 +356,7 @@ function HeroTitle() {
         alt="Pokéxplore"
         draggable={false}
         onError={() => setLogoFailed(true)}
-        className="h-16 w-auto object-contain drop-shadow-[0_4px_14px_rgba(0,0,0,0.3)] sm:h-20 md:h-24"
+        className="h-20 w-auto object-contain drop-shadow-[0_4px_14px_rgba(0,0,0,0.3)] sm:h-24 md:h-30"
       />
     </h1>
   );
