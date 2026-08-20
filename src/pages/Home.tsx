@@ -1,123 +1,150 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import type { RefObject } from 'react'
-import { Heart } from 'lucide-react'
-import { usePokemonIndex, usePokemonDetails, useTypeMembers } from '@/hooks/usePokemonData'
-import { useDebouncedValue } from '@/hooks/useDebouncedValue'
-import { useAppStore } from '@/store/useAppStore'
-import { slugify } from '@/services/pokemonApi'
-import { getSortOption, type SortDirection, type SortKey } from '@/constants/sort'
-import { getStat } from '@/utils/pokemon'
-import type { PokemonIndexEntry } from '@/types/pokemon'
-import { PageContainer } from '@/components/layout/PageContainer'
-import { ThemeToggle } from '@/components/layout/ThemeToggle'
-import { SearchBar } from '@/components/search/SearchBar'
-import { TypeFilter, type TypeFilterValue } from '@/components/filters/TypeFilter'
-import { SortControl } from '@/components/filters/SortControl'
-import { PokemonGrid } from '@/components/pokemon/PokemonGrid'
-import { CardSkeletonGrid } from '@/components/states/CardSkeleton'
-import { ErrorState } from '@/components/states/ErrorState'
-import { EmptyState } from '@/components/states/EmptyState'
-import { Button } from '@/components/ui/Button'
-import { PokeballIcon } from '@/components/ui/PokeballIcon'
-import { PokeballSpinner } from '@/components/ui/PokeballSpinner'
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { RefObject } from "react";
+import { Heart } from "lucide-react";
+import {
+  usePokemonIndex,
+  usePokemonDetails,
+  useTypeMembers,
+} from "@/hooks/usePokemonData";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useAppStore } from "@/store/useAppStore";
+import { slugify } from "@/services/pokemonApi";
+import {
+  getSortOption,
+  type SortDirection,
+  type SortKey,
+} from "@/constants/sort";
+import { getStat } from "@/utils/pokemon";
+import type { PokemonIndexEntry } from "@/types/pokemon";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { SearchBar } from "@/components/search/SearchBar";
+import {
+  TypeFilter,
+  type TypeFilterValue,
+} from "@/components/filters/TypeFilter";
+import { SortControl } from "@/components/filters/SortControl";
+import { PokemonGrid } from "@/components/pokemon/PokemonGrid";
+import { CardSkeletonGrid } from "@/components/states/CardSkeleton";
+import { ErrorState } from "@/components/states/ErrorState";
+import { EmptyState } from "@/components/states/EmptyState";
+import { Button } from "@/components/ui/Button";
+import { PokeballIcon } from "@/components/ui/PokeballIcon";
+import { PokeballSpinner } from "@/components/ui/PokeballSpinner";
 
-const PAGE_SIZE = 20
+const PAGE_SIZE = 20;
 
 export function Home() {
-  const [search, setSearch] = useState('')
-  const [type, setType] = useState<TypeFilterValue>('all')
-  const [sortKey, setSortKey] = useState<SortKey>('id')
-  const [direction, setDirection] = useState<SortDirection>('asc')
-  const [favoritesOnly, setFavoritesOnly] = useState(false)
-  const [visiblePages, setVisiblePages] = useState(1)
+  const [search, setSearch] = useState("");
+  const [type, setType] = useState<TypeFilterValue>("all");
+  const [sortKey, setSortKey] = useState<SortKey>("id");
+  const [direction, setDirection] = useState<SortDirection>("asc");
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [visiblePages, setVisiblePages] = useState(1);
 
-  const debouncedSearch = useDebouncedValue(search.trim(), 300)
-  const favorites = useAppStore((s) => s.favorites)
+  const debouncedSearch = useDebouncedValue(search.trim(), 300);
+  const favorites = useAppStore((s) => s.favorites);
 
-  const index = usePokemonIndex()
-  const typeMembers = useTypeMembers(type)
+  const index = usePokemonIndex();
+  const typeMembers = useTypeMembers(type);
 
   // Tracks whether the hero has scrolled past the top of the viewport, so the
   // compact filter bar can take over search/filter access.
-  const heroEndRef = useRef<HTMLDivElement>(null)
-  const [isCompact, setIsCompact] = useState(false)
+  const heroEndRef = useRef<HTMLDivElement>(null);
+  const [isCompact, setIsCompact] = useState(false);
 
   useEffect(() => {
-    const el = heroEndRef.current
-    if (!el) return
-    const observer = new IntersectionObserver(([entry]) => setIsCompact(!entry.isIntersecting))
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
+    const el = heroEndRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(([entry]) =>
+      setIsCompact(!entry.isIntersecting),
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Reset pagination whenever the result set (not just its order) changes.
   useEffect(() => {
-    setVisiblePages(1)
-  }, [debouncedSearch, type, favoritesOnly])
+    setVisiblePages(1);
+  }, [debouncedSearch, type, favoritesOnly]);
 
   /** Names -> index entries, filtered by favourites, type and search. */
   const filteredEntries = useMemo<PokemonIndexEntry[]>(() => {
-    if (!index.data) return []
-    let entries = index.data
+    if (!index.data) return [];
+    let entries = index.data;
 
     if (favoritesOnly) {
-      const favSet = new Set(favorites)
-      entries = entries.filter((e) => favSet.has(e.id))
+      const favSet = new Set(favorites);
+      entries = entries.filter((e) => favSet.has(e.id));
     }
 
-    if (type !== 'all' && typeMembers.data) {
-      const typeSet = new Set(typeMembers.data.map((e) => e.name))
-      entries = entries.filter((e) => typeSet.has(e.name))
+    if (type !== "all" && typeMembers.data) {
+      const typeSet = new Set(typeMembers.data.map((e) => e.name));
+      entries = entries.filter((e) => typeSet.has(e.name));
     }
 
     if (debouncedSearch) {
-      const q = slugify(debouncedSearch)
-      const asNumber = Number(debouncedSearch)
+      const q = slugify(debouncedSearch);
+      const asNumber = Number(debouncedSearch);
       entries = entries.filter(
-        (e) => e.name.includes(q) || (Number.isFinite(asNumber) && e.id === asNumber),
-      )
+        (e) =>
+          e.name.includes(q) ||
+          (Number.isFinite(asNumber) && e.id === asNumber),
+      );
     }
 
     // id / name sorts run at the index level (no details required)
-    const opt = getSortOption(sortKey)
+    const opt = getSortOption(sortKey);
     if (!opt.statKey) {
       entries = [...entries].sort((a, b) => {
-        const cmp = sortKey === 'name' ? a.name.localeCompare(b.name) : a.id - b.id
-        return direction === 'asc' ? cmp : -cmp
-      })
+        const cmp =
+          sortKey === "name" ? a.name.localeCompare(b.name) : a.id - b.id;
+        return direction === "asc" ? cmp : -cmp;
+      });
     }
 
-    return entries
-  }, [index.data, typeMembers.data, favoritesOnly, favorites, type, debouncedSearch, sortKey, direction])
+    return entries;
+  }, [
+    index.data,
+    typeMembers.data,
+    favoritesOnly,
+    favorites,
+    type,
+    debouncedSearch,
+    sortKey,
+    direction,
+  ]);
 
   const pagedEntries = useMemo(
     () => filteredEntries.slice(0, visiblePages * PAGE_SIZE),
     [filteredEntries, visiblePages],
-  )
+  );
 
-  const { pokemon, isLoading: detailsLoading } = usePokemonDetails(pagedEntries)
+  const { pokemon, isLoading: detailsLoading } =
+    usePokemonDetails(pagedEntries);
 
   /** Stat sorts operate on the resolved window; id/name keep index order. */
   const displayPokemon = useMemo(() => {
-    const opt = getSortOption(sortKey)
-    if (!opt.statKey) return pokemon
-    const statKey = opt.statKey
+    const opt = getSortOption(sortKey);
+    if (!opt.statKey) return pokemon;
+    const statKey = opt.statKey;
     return [...pokemon].sort((a, b) => {
-      const cmp = getStat(a, statKey) - getStat(b, statKey)
-      return direction === 'asc' ? cmp : -cmp
-    })
-  }, [pokemon, sortKey, direction])
+      const cmp = getStat(a, statKey) - getStat(b, statKey);
+      return direction === "asc" ? cmp : -cmp;
+    });
+  }, [pokemon, sortKey, direction]);
 
   const handleSortKeyChange = (key: SortKey) => {
-    setSortKey(key)
-    setDirection(getSortOption(key).defaultDir)
-  }
+    setSortKey(key);
+    setDirection(getSortOption(key).defaultDir);
+  };
 
-  const hasMore = pagedEntries.length < filteredEntries.length
-  const pendingCount = Math.max(0, pagedEntries.length - pokemon.length)
-  const initialLoading = index.isLoading || (type !== 'all' && typeMembers.isLoading)
-  const searching = search.trim() !== debouncedSearch
-  const toggleFavoritesOnly = () => setFavoritesOnly((v) => !v)
+  const hasMore = pagedEntries.length < filteredEntries.length;
+  const pendingCount = Math.max(0, pagedEntries.length - pokemon.length);
+  const initialLoading =
+    index.isLoading || (type !== "all" && typeMembers.isLoading);
+  const searching = search.trim() !== debouncedSearch;
+  const toggleFavoritesOnly = () => setFavoritesOnly((v) => !v);
 
   return (
     <>
@@ -131,7 +158,9 @@ export function Home() {
         sortKey={sortKey}
         direction={direction}
         onSortKeyChange={handleSortKeyChange}
-        onDirectionToggle={() => setDirection((d) => (d === 'asc' ? 'desc' : 'asc'))}
+        onDirectionToggle={() =>
+          setDirection((d) => (d === "asc" ? "desc" : "asc"))
+        }
         favoritesOnly={favoritesOnly}
         favoritesCount={favorites.length}
         onToggleFavorites={toggleFavoritesOnly}
@@ -163,9 +192,9 @@ export function Home() {
             favoritesOnly={favoritesOnly}
             search={debouncedSearch}
             onClear={() => {
-              setSearch('')
-              setType('all')
-              setFavoritesOnly(false)
+              setSearch("");
+              setType("all");
+              setFavoritesOnly(false);
             }}
           />
         ) : (
@@ -187,7 +216,7 @@ export function Home() {
                       Loading…
                     </>
                   ) : (
-                    'Load more'
+                    "Load more"
                   )}
                 </Button>
               </div>
@@ -196,26 +225,26 @@ export function Home() {
         )}
       </PageContainer>
     </>
-  )
+  );
 }
 
 interface HeroProps {
-  search: string
-  onSearch: (v: string) => void
-  searching: boolean
-  totalIndexed: number
-  type: TypeFilterValue
-  onTypeChange: (v: TypeFilterValue) => void
-  sortKey: SortKey
-  direction: SortDirection
-  onSortKeyChange: (key: SortKey) => void
-  onDirectionToggle: () => void
-  favoritesOnly: boolean
-  favoritesCount: number
-  onToggleFavorites: () => void
-  resultCount: number
-  showCount: boolean
-  sentinelRef: RefObject<HTMLDivElement | null>
+  search: string;
+  onSearch: (v: string) => void;
+  searching: boolean;
+  totalIndexed: number;
+  type: TypeFilterValue;
+  onTypeChange: (v: TypeFilterValue) => void;
+  sortKey: SortKey;
+  direction: SortDirection;
+  onSortKeyChange: (key: SortKey) => void;
+  onDirectionToggle: () => void;
+  favoritesOnly: boolean;
+  favoritesCount: number;
+  onToggleFavorites: () => void;
+  resultCount: number;
+  showCount: boolean;
+  sentinelRef: RefObject<HTMLDivElement | null>;
 }
 
 function Hero({
@@ -240,9 +269,12 @@ function Hero({
     <section className="relative overflow-hidden border-b border-border">
       {/* Background — placeholder gradient today; drop a real photo at /hero-bg.jpg to swap it in */}
       <div className="absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-soft via-bg to-bg" />
-        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/hero-bg.jpg')" }} />
-        <div className="absolute inset-0 bg-bg/80 backdrop-blur-[2px]" />
+        {/* <div className="absolute inset-0 bg-gradient-to-br from-primary-soft via-bg to-bg" /> */}
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url('/hero_bg.jpg')" }}
+        />
+        {/* <div className="absolute inset-0 bg-bg/80 backdrop-blur-[2px]" /> */}
       </div>
 
       <PageContainer className="pb-6 pt-6 sm:pt-8">
@@ -259,21 +291,30 @@ function Hero({
           <div className="mt-5 text-center">
             <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/70 px-3.5 py-1.5 text-xs font-semibold text-muted backdrop-blur-sm">
               <span className="h-1.5 w-1.5 rounded-full bg-success" />
-              {totalIndexed > 0 ? `${totalIndexed.toLocaleString()} Pokémon indexed` : 'Live PokéAPI data'}
+              {totalIndexed > 0
+                ? `${totalIndexed.toLocaleString()} Pokémon indexed`
+                : "Live PokéAPI data"}
             </span>
             <h1 className="mt-4 text-4xl font-bold leading-[1.05] tracking-tight text-ink sm:text-5xl md:text-6xl">
-              Explore the{' '}
+              Explore the{" "}
               <span className="bg-gradient-to-r from-primary to-[#8b5cf6] bg-clip-text text-transparent">
                 Pokédex
               </span>
             </h1>
             <p className="mx-auto mt-3 max-w-md text-base text-muted sm:text-lg">
-              Search, filter and compare every Pokémon — stats, types, abilities and moves, in one fast field guide.
+              Search, filter and compare every Pokémon — stats, types, abilities
+              and moves, in one fast field guide.
             </p>
           </div>
 
           <div className="mx-auto mt-6 max-w-xl">
-            <FilterBar search={search} onSearch={onSearch} searching={searching} type={type} onTypeChange={onTypeChange} />
+            <FilterBar
+              search={search}
+              onSearch={onSearch}
+              searching={searching}
+              type={type}
+              onTypeChange={onTypeChange}
+            />
 
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
               <SortControl
@@ -283,7 +324,10 @@ function Hero({
                 onDirectionToggle={onDirectionToggle}
               />
               {showCount && (
-                <p className="tabular text-sm font-medium text-muted" aria-live="polite">
+                <p
+                  className="tabular text-sm font-medium text-muted"
+                  aria-live="polite"
+                >
                   {resultCount.toLocaleString()} Pokémon
                 </p>
               )}
@@ -293,9 +337,13 @@ function Hero({
       </PageContainer>
 
       {/* Once this edge scrolls under the sticky header, the compact bar takes over */}
-      <div ref={sentinelRef} className="absolute inset-x-0 bottom-0 h-px" aria-hidden="true" />
+      <div
+        ref={sentinelRef}
+        className="absolute inset-x-0 bottom-0 h-px"
+        aria-hidden="true"
+      />
     </section>
-  )
+  );
 }
 
 /** The type-dropdown + search field, merged into one bordered bar. Reused full-size in the hero and compact in the sticky bar. */
@@ -306,19 +354,24 @@ function FilterBar({
   type,
   onTypeChange,
 }: {
-  search: string
-  onSearch: (v: string) => void
-  searching: boolean
-  type: TypeFilterValue
-  onTypeChange: (v: TypeFilterValue) => void
+  search: string;
+  onSearch: (v: string) => void;
+  searching: boolean;
+  type: TypeFilterValue;
+  onTypeChange: (v: TypeFilterValue) => void;
 }) {
   return (
     <div className="flex overflow-hidden rounded-[var(--radius-control)] border border-border bg-surface shadow-[var(--shadow-sm)]">
-      <TypeFilter value={type} onChange={onTypeChange} bare className="w-[9.5rem] shrink-0 sm:w-44" />
+      <TypeFilter
+        value={type}
+        onChange={onTypeChange}
+        bare
+        className="w-[9.5rem] shrink-0 sm:w-44"
+      />
       <div className="w-px shrink-0 bg-border" />
       <SearchBar value={search} onChange={onSearch} loading={searching} bare />
     </div>
-  )
+  );
 }
 
 /** Favourites toggle + theme toggle, grouped top-right in both the hero and the compact bar. */
@@ -327,9 +380,9 @@ function QuickActions({
   favoritesCount,
   onToggleFavorites,
 }: {
-  favoritesOnly: boolean
-  favoritesCount: number
-  onToggleFavorites: () => void
+  favoritesOnly: boolean;
+  favoritesCount: number;
+  onToggleFavorites: () => void;
 }) {
   return (
     <div className="flex items-center gap-2">
@@ -337,14 +390,18 @@ function QuickActions({
         type="button"
         onClick={onToggleFavorites}
         aria-pressed={favoritesOnly}
-        aria-label={favoritesOnly ? 'Show all Pokémon' : 'Show favourites only'}
+        aria-label={favoritesOnly ? "Show all Pokémon" : "Show favourites only"}
         className={`relative grid h-11 w-11 shrink-0 place-items-center rounded-full border transition-all duration-200 active:scale-90 ${
           favoritesOnly
-            ? 'border-transparent bg-danger text-white'
-            : 'border-border bg-surface text-muted hover:border-border-strong hover:text-ink'
+            ? "border-transparent bg-danger text-white"
+            : "border-border bg-surface text-muted hover:border-border-strong hover:text-ink"
         }`}
       >
-        <Heart className="h-[18px] w-[18px]" fill={favoritesOnly ? 'currentColor' : 'none'} strokeWidth={2.2} />
+        <Heart
+          className="h-[18px] w-[18px]"
+          fill={favoritesOnly ? "currentColor" : "none"}
+          strokeWidth={2.2}
+        />
         {favoritesCount > 0 && (
           <span className="tabular absolute -right-1 -top-1 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">
             {favoritesCount}
@@ -353,7 +410,7 @@ function QuickActions({
       </button>
       <ThemeToggle />
     </div>
-  )
+  );
 }
 
 /** Compact sticky filter bar — fades in under the header once the hero scrolls away, so search/filter stay reachable. */
@@ -368,26 +425,34 @@ function CompactFilterBar({
   favoritesCount,
   onToggleFavorites,
 }: {
-  visible: boolean
-  search: string
-  onSearch: (v: string) => void
-  searching: boolean
-  type: TypeFilterValue
-  onTypeChange: (v: TypeFilterValue) => void
-  favoritesOnly: boolean
-  favoritesCount: number
-  onToggleFavorites: () => void
+  visible: boolean;
+  search: string;
+  onSearch: (v: string) => void;
+  searching: boolean;
+  type: TypeFilterValue;
+  onTypeChange: (v: TypeFilterValue) => void;
+  favoritesOnly: boolean;
+  favoritesCount: number;
+  onToggleFavorites: () => void;
 }) {
   return (
     <div
       className={`fixed inset-x-0 top-0 z-30 border-b border-border bg-bg/90 shadow-[var(--shadow-sm)] backdrop-blur-xl transition-all duration-300 ${
-        visible ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'
+        visible
+          ? "translate-y-0 opacity-100"
+          : "pointer-events-none -translate-y-2 opacity-0"
       }`}
       aria-hidden={!visible}
     >
       <PageContainer className="flex items-center gap-3 py-2.5">
         <div className="min-w-0 flex-1">
-          <FilterBar search={search} onSearch={onSearch} searching={searching} type={type} onTypeChange={onTypeChange} />
+          <FilterBar
+            search={search}
+            onSearch={onSearch}
+            searching={searching}
+            type={type}
+            onTypeChange={onTypeChange}
+          />
         </div>
         <QuickActions
           favoritesOnly={favoritesOnly}
@@ -396,7 +461,7 @@ function CompactFilterBar({
         />
       </PageContainer>
     </div>
-  )
+  );
 }
 
 function EmptyResults({
@@ -404,9 +469,9 @@ function EmptyResults({
   search,
   onClear,
 }: {
-  favoritesOnly: boolean
-  search: string
-  onClear: () => void
+  favoritesOnly: boolean;
+  search: string;
+  onClear: () => void;
 }) {
   if (favoritesOnly) {
     return (
@@ -416,7 +481,7 @@ function EmptyResults({
         body="Tap the heart on any Pokémon to keep it here for quick access."
         action={<Button onClick={onClear}>Browse all Pokémon</Button>}
       />
-    )
+    );
   }
   return (
     <EmptyState
@@ -424,9 +489,9 @@ function EmptyResults({
       body={
         search
           ? `We couldn't find anything matching “${search}”. Try another name or dex number.`
-          : 'No Pokémon match these filters. Try clearing them.'
+          : "No Pokémon match these filters. Try clearing them."
       }
       action={<Button onClick={onClear}>Clear filters</Button>}
     />
-  )
+  );
 }

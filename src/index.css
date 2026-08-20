@@ -92,6 +92,8 @@
   --font-card: 'Cabin', 'Gill Sans', 'Gill Sans MT', 'Segoe UI', sans-serif;
   /* Tall condensed display face for the card's stage tag */
   --font-stage: 'Bebas Neue', 'Oswald', 'Segoe UI Condensed', sans-serif;
+  /* Dot-matrix LCD face for the Pokédex device readout screens */
+  --font-lcd: 'VT323', ui-monospace, 'DM Mono', 'Courier New', monospace;
 
   --radius-card: 22px;
   --radius-control: 14px;
@@ -214,6 +216,345 @@
     23px 23px, 13px 13px, 25px 25px, 18px 18px,
     100% 100%;
   background-repeat: repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat, no-repeat;
+}
+
+/* ============================================================
+   Pokédex device — modern-retro shell + LCD readout screens
+   ============================================================ */
+
+/* Classic Pokédex-red device body: bevelled plastic that works in both themes.
+   Raised off the page with a deep drop shadow + a hard darker-red rim so the
+   whole device reads as a physical object you could pick up. */
+.pokedex-shell {
+  position: relative;
+  background:
+    linear-gradient(158deg, #f65454 0%, #e02b2b 40%, #b81b1f 78%, #8f1216 100%);
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.34),
+    inset 0 -6px 12px rgba(90, 8, 12, 0.6),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 0 0 2px rgba(120, 12, 16, 0.9),
+    0 2px 3px rgba(120, 12, 16, 0.7),
+    0 26px 50px -14px rgba(90, 10, 14, 0.55),
+    0 10px 22px -10px rgba(0, 0, 0, 0.45);
+}
+/* Engraved inner frame line — the moulded seam of the plastic case. */
+.pokedex-shell::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: calc(var(--radius-card) - 7px);
+  pointer-events: none;
+  z-index: 1;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+    inset 0 0 0 2px rgba(90, 8, 12, 0.4);
+}
+.pokedex-shell > *:not(svg) {
+  position: relative;
+  z-index: 2;
+}
+.dark .pokedex-shell {
+  background:
+    linear-gradient(158deg, #d13a3f 0%, #b21d22 42%, #8f1418 80%, #6f0f13 100%);
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -6px 12px rgba(40, 4, 6, 0.65),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 0 0 2px rgba(70, 8, 10, 0.9),
+    0 2px 3px rgba(0, 0, 0, 0.6),
+    0 26px 50px -14px rgba(0, 0, 0, 0.6),
+    0 10px 22px -10px rgba(0, 0, 0, 0.5);
+}
+
+/* Desktop silhouette — the classic fold-open shape: the left panel rises full
+   height with the lens/button "brow", and the top-right is notched away so the
+   right panel starts lower, level with the hinge. clip-path defines the stepped
+   outline; the lift moves to filter:drop-shadow so it follows that outline,
+   while inset shadows still trace the bevel + moulded rim. */
+@media (min-width: 1024px) {
+  .pokedex-shell {
+    --step-x: 51.1%;
+    --step-y: 62px;
+    --chamfer: 16px;
+    border-radius: 0;
+    clip-path: polygon(
+      var(--chamfer) 0,
+      var(--step-x) 0,
+      var(--step-x) var(--step-y),
+      calc(100% - var(--chamfer)) var(--step-y),
+      100% calc(var(--step-y) + var(--chamfer)),
+      100% calc(100% - var(--chamfer)),
+      calc(100% - var(--chamfer)) 100%,
+      var(--chamfer) 100%,
+      0 calc(100% - var(--chamfer)),
+      0 var(--chamfer)
+    );
+    box-shadow:
+      /* directional bevel — raised plastic: bright top-left, dark bottom-right */
+      inset 0 3px 1px rgba(255, 255, 255, 0.4),
+      inset 3px 0 2px rgba(255, 255, 255, 0.16),
+      inset 0 -5px 10px rgba(90, 8, 12, 0.55),
+      inset -3px 0 8px rgba(90, 8, 12, 0.4),
+      /* engraved moulded frame that traces the whole stepped outline:
+         dark edge rim (0–2px) → highlight (2–4px) → dark groove (4–6px) */
+      inset 0 0 0 2px rgba(120, 12, 16, 0.9),
+      inset 0 0 0 4px rgba(255, 255, 255, 0.22),
+      inset 0 0 0 6px rgba(90, 8, 12, 0.5);
+    filter:
+      drop-shadow(0 1px 1px rgba(120, 12, 16, 0.75))
+      drop-shadow(0 6px 8px rgba(90, 10, 14, 0.4))
+      drop-shadow(0 22px 34px rgba(90, 10, 14, 0.45));
+  }
+  .pokedex-shell::before {
+    display: none;
+  }
+  .dark .pokedex-shell {
+    box-shadow:
+      inset 0 3px 1px rgba(255, 255, 255, 0.2),
+      inset 3px 0 2px rgba(255, 255, 255, 0.08),
+      inset 0 -5px 10px rgba(40, 4, 6, 0.6),
+      inset -3px 0 8px rgba(40, 4, 6, 0.5),
+      inset 0 0 0 2px rgba(70, 8, 10, 0.9),
+      inset 0 0 0 4px rgba(255, 255, 255, 0.12),
+      inset 0 0 0 6px rgba(20, 2, 4, 0.55);
+    filter:
+      drop-shadow(0 1px 1px rgba(0, 0, 0, 0.75))
+      drop-shadow(0 6px 8px rgba(0, 0, 0, 0.55))
+      drop-shadow(0 22px 34px rgba(0, 0, 0, 0.6));
+  }
+}
+
+/* Rarity bezels — the frame directly around the screens. */
+.pokedex-bezel-neutral {
+  background: linear-gradient(160deg, #8f1418, #5f0d10);
+}
+.tcg-rainbow-foil {
+  background-image: linear-gradient(120deg, #ff5f8f, #ffd166, #6ee7b7, #60a5fa, #c084fc, #ff5f8f);
+  background-size: 200% 200%;
+  animation: foil-drift 6s linear infinite;
+}
+@keyframes foil-drift {
+  to { background-position: 200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tcg-rainbow-foil { animation: none; }
+}
+
+/* Green dot-matrix LCD screen — the signature Pokédex readout. */
+.lcd {
+  position: relative;
+  overflow: hidden;
+  font-family: var(--font-lcd);
+  color: #26340f;
+  background:
+    linear-gradient(160deg, #cfe08a 0%, #b6d072 40%, #a6c65f 100%);
+  box-shadow:
+    /* sunk into the red shell: dark lip shadow above + groove ring + a
+       thin catch-light below, so the screen reads as recessed plastic */
+    0 -2px 3px rgba(40, 6, 8, 0.35),
+    0 0 0 1px rgba(40, 6, 8, 0.3),
+    0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.25),
+    inset 0 2px 8px rgba(41, 61, 12, 0.35),
+    inset 0 -1px 3px rgba(255, 255, 255, 0.3);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+.dark .lcd {
+  color: #1f2e08;
+  background:
+    linear-gradient(160deg, #bcd67f 0%, #9fc25a 45%, #8bb249 100%);
+}
+/* Scanline + pixel-grid overlay that scales with the screen. */
+.lcd::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(rgba(20, 34, 4, 0.08) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(20, 34, 4, 0.05) 0 1px, transparent 1px 3px);
+  mix-blend-mode: multiply;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lcd::after { background: repeating-linear-gradient(rgba(20, 34, 4, 0.06) 0 1px, transparent 1px 3px); }
+}
+
+/* Blinking terminal cursor for the LCD "dex entry" readout. */
+.lcd-cursor {
+  display: inline-block;
+  animation: lcd-blink 1.1s steps(1) infinite;
+}
+@keyframes lcd-blink {
+  50% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lcd-cursor { animation: none; }
+}
+
+/* The book "spine" hinge between the two Pokédex panels (desktop only) — a
+   stack of alternating dark "gap" links and bright "hinge" barrels, echoing
+   the classic device's segmented spine. */
+.pokedex-hinge {
+  display: flex;
+  flex-direction: column;
+  width: 22px;
+  padding: 2px;
+  gap: 2px;
+  border-radius: 6px;
+  background: #3a0c0e;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.35);
+}
+.pokedex-hinge > span {
+  border-radius: 4px;
+  border: 2px solid;
+}
+.pokedex-hinge > .hinge-gap {
+  flex: 1;
+  background: linear-gradient(90deg, #460f0f 0, #891313 30%, #b31818 45%, #fd5555 65%, #b31818 95%);
+  border-color: #891313 #b31818 #891313 #5f1010;
+}
+.pokedex-hinge > .hinge-barrel {
+  flex: 3;
+  background: linear-gradient(90deg, #891313 0, #b31818 30%, #e61515 45%, #fd5555 65%, #e61515 95%);
+  border-color: #fd5555 #fd5555 #5f1010 #5f1010;
+}
+
+/* Recessed dark screen frame that green LCDs sit inside. */
+.pokedex-screen-frame {
+  background: linear-gradient(160deg, #7a1216, #4f0c0f);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+/* Blue console "function" buttons — the data console's tab selector. */
+.console-btn {
+  background:
+    radial-gradient(circle at 40% 25%, rgba(255, 255, 255, 0.5) 6%, transparent 40%),
+    linear-gradient(160deg, #3fc3ff, #0a95e6 60%, #0a72c4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.25),
+    0 2px 4px rgba(0, 0, 0, 0.3);
+}
+/* Silver bezel frame around the main sprite screen — sunk into the red
+   shell the same way the green LCDs are, with a dark lip shadow above and
+   a groove ring where the plastic meets the shell. */
+.device-bezel {
+  background:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0) 20%),
+    repeating-linear-gradient(
+      115deg,
+      #eef1f4 0px,
+      #dde2e7 2px,
+      #c3c9d1 3.5px,
+      #dde2e7 5px,
+      #eef1f4 7px
+    ),
+    linear-gradient(160deg, #e6e9ed 0%, #b7bec8 55%, #838a95 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.25),
+    0 -2px 3px rgba(70, 8, 10, 0.45),
+    0 0 0 1px rgba(70, 8, 10, 0.4),
+    0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Glossy blue screen — the sprite viewport itself. */
+.device-screen-blue {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 32% 24%, #a9e2ff 0%, #4fa3ec 45%, #1c5fa8 100%);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.22),
+    inset 0 3px 10px rgba(8, 36, 74, 0.45),
+    inset 0 -2px 6px rgba(255, 255, 255, 0.15);
+}
+
+/* Small red sensor dots above the screen. */
+.device-dot {
+  background: radial-gradient(circle at 35% 30%, #ff8a8a, #e5484d 60%, #a8262b);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 1px 1px rgba(0, 0, 0, 0.3);
+}
+
+/* Red circular control button beneath the screen. */
+.device-red-btn {
+  background: radial-gradient(circle at 35% 28%, #ff9a9a, #e5484d 55%, #a8262b 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+    0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* Metallic gray frame for the D-pad + screen console. */
+.device-console-frame {
+  background: linear-gradient(160deg, #b6bbc3 0%, #8d939c 55%, #6b717a 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.25),
+    0 -2px 3px rgba(70, 8, 10, 0.45),
+    0 0 0 1px rgba(70, 8, 10, 0.4),
+    0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Speaker-grille texture beneath the screen — lights amber when shiny is active. */
+.device-grille {
+  background-color: #b8bfc9;
+  background-image: repeating-linear-gradient(180deg, #8b93a0 0 2px, transparent 2px 5px);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+.device-grille-active {
+  background-color: #e6a423;
+  background-image: repeating-linear-gradient(180deg, #a86e0e 0 2px, transparent 2px 5px);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 6px rgba(230, 164, 35, 0.6);
+}
+
+/* Chrome D-pad / control-cluster button — radial blue "glass" like the classic
+   device's round controls, with a double outer ring. */
+.chrome-btn {
+  position: relative;
+  background: radial-gradient(circle farthest-corner at 40% 25%, #dceef1 9%, #7cd6e8 20%, #405aa5 62%, #2b7dc4 100%);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.chrome-btn::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 3px double rgba(95, 13, 16, 0.55);
+  pointer-events: none;
+}
+.chrome-btn:hover:not(:disabled) {
+  background: radial-gradient(circle farthest-corner at 40% 25%, #e9f1d8 9%, #b8ed7c 20%, #40a56a 62%, #2bc491 100%);
+}
+.chrome-btn:active:not(:disabled) {
+  background: radial-gradient(circle farthest-corner at 40% 25%, #e5ffb5 9%, #ccec7c 20%, #67a540 62%, #42cc28 100%);
+}
+
+/* Rotated "groove" control — echoes the classic device's tilted circular
+   buttons (sprite gender/shiny/rotate, move-list steppers). Content is
+   counter-rotated so icons/text stay upright. */
+.groove-control {
+  transform: rotate(60deg);
+  border: groove #8a8f9c 3px;
+  transition: border-color 0.15s ease;
+}
+.groove-control:hover:not(:disabled) {
+  border-color: #b8ed7c;
+}
+.groove-control:active:not(:disabled) {
+  border-color: #f4fcb9;
+}
+.groove-control > * {
+  transform: rotate(-60deg);
+}
+
+.console-btn-active {
+  background:
+    radial-gradient(circle at 40% 25%, rgba(255, 255, 255, 0.6) 6%, transparent 40%),
+    linear-gradient(160deg, #7ff2c0, #16b981 55%, #0e8f63);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.35),
+    0 0 0 2px rgba(255, 255, 255, 0.25);
 }
 
 .animate-float-in {
