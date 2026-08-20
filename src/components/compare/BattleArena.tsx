@@ -481,7 +481,7 @@ function MatchupPill({ type, multiplier }: { type: PokemonTypeName; multiplier: 
       style={{ backgroundColor: `color-mix(in srgb, ${cfg.color} 32%, transparent)` }}
       title={`${cfg.label}${multiplier !== 0 ? ` ${formatMultiplier(multiplier)}` : ''}`}
     >
-      <span aria-hidden="true">{cfg.emoji}</span>
+      <cfg.Icon className="h-3 w-3 shrink-0" strokeWidth={2.4} aria-hidden="true" />
       {cfg.label}
       {multiplier !== 0 && (
         <span className="tabular rounded bg-black/15 px-1 text-[0.6rem] dark:bg-black/30">
@@ -521,7 +521,7 @@ function TypeChip({ type }: { type: string }) {
       className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide text-white shadow-[0_1px_3px_rgba(0,0,0,0.4)] ring-1 ring-white/30"
       style={{ background: `linear-gradient(160deg, ${cfg.from}, ${cfg.to})` }}
     >
-      <span aria-hidden="true">{cfg.emoji}</span>
+      <cfg.Icon className="h-3 w-3 shrink-0" strokeWidth={2.4} aria-hidden="true" />
       {cfg.label}
     </span>
   )

@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react'
+import { Check, Shapes } from 'lucide-react'
 import { getTypeConfig, FILTER_TYPES } from '@/constants/pokemonTypes'
 import type { PokemonTypeName } from '@/types/pokemon'
 import { Dropdown } from '@/components/ui/Dropdown'
@@ -39,8 +39,12 @@ export function TypeFilter({ value, onChange, bare = false, className = '' }: Ty
               : 'rounded-[var(--radius-control)] border border-border bg-surface shadow-[var(--shadow-sm)] hover:border-border-strong'
           }`}
         >
-          <span className="text-base leading-none" aria-hidden="true">
-            {cfg ? cfg.emoji : '🎯'}
+          <span className="grid h-5 w-5 shrink-0 place-items-center" aria-hidden="true">
+            {cfg ? (
+              <cfg.Icon className="h-[15px] w-[15px]" strokeWidth={2.4} style={{ color: cfg.color }} />
+            ) : (
+              <Shapes className="h-[15px] w-[15px] text-muted" strokeWidth={2.2} />
+            )}
           </span>
           <span className="truncate">{cfg ? cfg.label : 'All types'}</span>
           <Chevron
@@ -68,7 +72,7 @@ export function TypeFilter({ value, onChange, bare = false, className = '' }: Ty
                   : 'text-ink hover:bg-surface-2'
               }`}
             >
-              <span aria-hidden="true">🎯</span>
+              <Shapes className="h-4 w-4 shrink-0" strokeWidth={2.2} aria-hidden="true" />
               All types
               {value === 'all' && <Check className="ml-auto h-4 w-4" strokeWidth={2.6} />}
             </button>
@@ -96,9 +100,12 @@ export function TypeFilter({ value, onChange, bare = false, className = '' }: Ty
                         : 'text-ink hover:brightness-[1.06]'
                     }`}
                   >
-                    <span className="shrink-0 text-sm leading-none" aria-hidden="true">
-                      {c.emoji}
-                    </span>
+                    <c.Icon
+                      className="h-4 w-4 shrink-0"
+                      strokeWidth={2.2}
+                      style={selected ? undefined : { color: c.color }}
+                      aria-hidden="true"
+                    />
                     <span className="truncate">{c.label}</span>
                   </button>
                 )

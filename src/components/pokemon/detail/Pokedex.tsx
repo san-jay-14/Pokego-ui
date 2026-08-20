@@ -323,10 +323,10 @@ function CompareButton({ id, name }: { id: number; name: string }) {
       aria-pressed={isComparing}
       aria-label={isComparing ? `Remove ${name} from compare` : `Add ${name} to compare`}
       title={isComparing ? 'Remove from compare' : 'Add to compare'}
-      className={`grid h-9 w-9 place-items-center rounded-full border backdrop-blur-sm transition-all duration-200 active:scale-90 ${
+      className={`grid h-9 w-9 place-items-center rounded-full border bg-surface shadow-[var(--shadow-sm)] transition-all duration-200 active:scale-90 ${
         isComparing
-          ? 'border-transparent bg-primary/20 text-primary'
-          : 'border-border bg-surface/70 text-muted hover:border-primary/40 hover:text-primary'
+          ? 'border-primary/50 text-primary ring-2 ring-primary/35'
+          : 'border-border text-muted ring-1 ring-black/10 hover:border-primary/40 hover:text-primary dark:ring-white/10'
       }`}
     >
       <Scale className="h-[18px] w-[18px]" strokeWidth={2.2} />

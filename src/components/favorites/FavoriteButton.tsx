@@ -26,10 +26,10 @@ export function FavoriteButton({ id, name, size = 'sm', className = '' }: Favori
       }}
       aria-pressed={isFavorite}
       aria-label={isFavorite ? `Remove ${name} from favourites` : `Add ${name} to favourites`}
-      className={`grid place-items-center rounded-full border backdrop-blur-sm transition-all duration-200 active:scale-90 ${box} ${
+      className={`grid place-items-center rounded-full border bg-surface shadow-[var(--shadow-sm)] transition-all duration-200 active:scale-90 ${box} ${
         isFavorite
-          ? 'border-transparent bg-danger/15 text-danger'
-          : 'border-border bg-surface/70 text-muted hover:text-danger hover:border-danger/40'
+          ? 'border-danger/50 text-danger ring-2 ring-danger/35'
+          : 'border-border text-muted ring-1 ring-black/10 hover:text-danger hover:border-danger/40 dark:ring-white/10'
       } ${className}`}
     >
       <Heart className={icon} fill={isFavorite ? 'currentColor' : 'none'} strokeWidth={2.2} />
