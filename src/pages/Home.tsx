@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
+import { Outlet } from "react-router-dom";
 import { Heart } from "lucide-react";
 import {
   usePokemonIndex,
@@ -224,6 +225,9 @@ export function Home() {
           </>
         )}
       </PageContainer>
+
+      {/* Pokédex detail modal renders here when the URL is /pokemon/:name */}
+      <Outlet />
     </>
   );
 }

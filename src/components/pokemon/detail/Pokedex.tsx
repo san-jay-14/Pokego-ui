@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { ChevronLeft, ChevronRight, Crown, Sparkles, Star } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Crown, Sparkles, Star, X } from 'lucide-react'
 import type {
   AbilityDetail,
   EvolutionChain as EvolutionChainType,
@@ -37,6 +37,8 @@ interface PokedexProps {
   evolutionLoading: boolean
   formName: string
   onFormSelect: (name: string) => void
+  /** When set, the chrome lens acts as the device's close control. */
+  onClose?: () => void
 }
 
 type Tone = 'legendary' | 'mythical' | 'baby' | 'neutral'
@@ -109,36 +111,14 @@ export function Pokedex(props: PokedexProps) {
       </svg>
 
       {/* The two leaves + spine */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,0.95fr)_auto_minmax(0,0.95fr)] lg:gap-3.5">
+      <div className="pokedex-leaves grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,0.95fr)_auto_minmax(0,0.95fr)] lg:gap-3.5">
         {/* Left leaf — identity (starts at the very top, header included) */}
         <div className="flex flex-col gap-3">
           {/* Status bar */}
           <div className="flex items-center gap-2.5 px-1">
-            {/* Chrome-ringed lens — the classic Pokédex "eye" */}
-            <span
-              className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full p-[3px]"
-              style={{
-                background: 'linear-gradient(160deg, #f4f6f9 0%, #c7ced9 45%, #8b93a1 100%)',
-                boxShadow:
-                  'inset 0 1px 1px rgba(255,255,255,0.85), inset 0 -1px 2px rgba(0,0,0,0.28), 0 2px 5px rgba(0,0,0,0.45)',
-              }}
-              aria-hidden="true"
-            >
-              <span
-                className="relative grid h-full w-full place-items-center overflow-hidden rounded-full"
-                style={{
-                  background:
-                    'radial-gradient(circle at 34% 26%, #eaf8ff 0%, #8fd0ff 22%, #3f9aeb 52%, #155faa 80%, #0a3866 100%)',
-                  boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.55), inset 0 -3px 6px rgba(5,20,45,0.55)',
-                }}
-              >
-                <span
-                  className="absolute -left-2 -top-3 h-7 w-9 rounded-full bg-white/70 blur-[3px]"
-                  style={{ transform: 'rotate(-35deg)' }}
-                />
-                <span className="absolute bottom-0 right-0 h-4 w-4 rounded-full bg-black/25 blur-[2px]" />
-              </span>
-            </span>
+            {/* Chrome-ringed lens — the classic Pokédex "eye", doubling as the
+                close control when opened as a modal. */}
+            <LensEye onClose={props.onClose} />
             <div className="flex items-center gap-1.5" aria-hidden="true">
               <span
                 className="h-2.5 w-2.5 rounded-full"
@@ -237,31 +217,95 @@ export function Pokedex(props: PokedexProps) {
           <span className="hinge-gap" />
         </div>
 
-        {/* Right leaf — data console, offset down to start where the left leaf's header ends */}
-        <div className="mx-auto flex w-[85%] min-w-[210px] flex-col gap-2.5 lg:mt-[56px]">
-          <DataConsole pokemon={active} species={species} abilityDetails={props.abilityDetails} />
+        {/* Right leaf — data console. This is the swinging lid: at desktop it
+            becomes its own red panel hinged on the spine, so it opens/closes at
+            the hinge while the left leaf stays planted. */}
+        <div className="pokedex-flap lg:mt-[56px]">
+          <div className="mx-auto flex w-[85%] min-w-[210px] flex-col gap-2.5">
+            <DataConsole pokemon={active} species={species} abilityDetails={props.abilityDetails} />
 
-          <RailLabel>Evolution</RailLabel>
-          <EvolutionRail
-            chain={props.evolution}
-            isLoading={props.speciesLoading || props.evolutionLoading}
-            currentId={base.id}
-          />
+            <RailLabel>Evolution</RailLabel>
+            <EvolutionRail
+              chain={props.evolution}
+              isLoading={props.speciesLoading || props.evolutionLoading}
+              currentId={base.id}
+            />
 
-          {/* Decorative control bar — echoes the classic device's button strip */}
-          <div aria-hidden="true" className="mt-1.5 flex items-center justify-center gap-1">
-            {Array.from({ length: 7 }, (_, i) => (
-              <span key={i} className="console-btn h-3.5 w-7 rounded-md sm:h-4 sm:w-9" />
-            ))}
+            {/* Decorative control bar — echoes the classic device's button strip */}
+            <div aria-hidden="true" className="mt-1.5 flex items-center justify-center gap-1">
+              {Array.from({ length: 7 }, (_, i) => (
+                <span key={i} className="console-btn h-3.5 w-7 rounded-md sm:h-4 sm:w-9" />
+              ))}
+            </div>
+
+            <RailLabel>Moves</RailLabel>
+            <MoveBrowser pokemon={active} />
+
+            <DeviceNav id={base.id} />
           </div>
-
-          <RailLabel>Moves</RailLabel>
-          <MoveBrowser pokemon={active} />
-
-          <DeviceNav id={base.id} />
         </div>
       </div>
     </section>
+  )
+}
+
+/**
+ * The chrome-ringed blue lens. Purely decorative on its own; when given
+ * `onClose` it becomes the device's close button, revealing an ✕ on hover so
+ * its new job is discoverable without spoiling the resting look.
+ */
+function LensEye({ onClose }: { onClose?: () => void }) {
+  const inner = (
+    <span
+      className="relative grid h-full w-full place-items-center overflow-hidden rounded-full"
+      style={{
+        background:
+          'radial-gradient(circle at 34% 26%, #eaf8ff 0%, #8fd0ff 22%, #3f9aeb 52%, #155faa 80%, #0a3866 100%)',
+        boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.55), inset 0 -3px 6px rgba(5,20,45,0.55)',
+      }}
+    >
+      <span
+        className="absolute -left-2 -top-3 h-7 w-9 rounded-full bg-white/70 blur-[3px]"
+        style={{ transform: 'rotate(-35deg)' }}
+      />
+      <span className="absolute bottom-0 right-0 h-4 w-4 rounded-full bg-black/25 blur-[2px]" />
+      {onClose && (
+        <span className="pointer-events-none absolute inset-0 grid place-items-center opacity-0 transition-opacity duration-150 group-hover/lens:opacity-100 group-focus-visible/lens:opacity-100">
+          <X className="h-4 w-4 text-white drop-shadow-[0_1px_2px_rgba(0,20,45,0.9)]" strokeWidth={3.2} />
+        </span>
+      )}
+    </span>
+  )
+
+  const ringStyle = {
+    background: 'linear-gradient(160deg, #f4f6f9 0%, #c7ced9 45%, #8b93a1 100%)',
+    boxShadow:
+      'inset 0 1px 1px rgba(255,255,255,0.85), inset 0 -1px 2px rgba(0,0,0,0.28), 0 2px 5px rgba(0,0,0,0.45)',
+  }
+
+  if (!onClose) {
+    return (
+      <span
+        className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full p-[3px]"
+        style={ringStyle}
+        aria-hidden="true"
+      >
+        {inner}
+      </span>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClose}
+      aria-label="Close Pokédex"
+      title="Close Pokédex"
+      className="group/lens relative grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full border-0 p-[3px] outline-none transition-transform duration-150 hover:scale-105 active:scale-90 focus-visible:ring-2 focus-visible:ring-white/85 focus-visible:ring-offset-1"
+      style={ringStyle}
+    >
+      {inner}
+    </button>
   )
 }
 

@@ -564,6 +564,105 @@
   animation: pop-in 0.45s var(--ease-out-back) both;
 }
 
+/* ============================================================
+   Pokédex modal — the device rises in and the right leaf swings
+   open on the hinge like a book; on close the lid swings shut and
+   the whole device drops away before it navigates home.
+   ============================================================ */
+.pokedex-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  overflow-y: auto;
+  padding: clamp(1rem, 4vh, 3rem) 1rem;
+  background: rgba(10, 6, 8, 0.55);
+  backdrop-filter: blur(6px);
+  animation: modal-fade-in 0.35s var(--ease-smooth) both;
+}
+.pokedex-modal-backdrop[data-closing] {
+  animation: modal-fade-out 0.42s var(--ease-smooth) both;
+}
+.pokedex-modal-stage {
+  margin: auto; /* centres when it fits, scrolls when taller */
+  width: 100%;
+  max-width: 1000px;
+}
+/* The wrapper only rises/drops + fades — it never rotates, so the left leaf
+   stays planted. The hinge swing lives on .pokedex-flap (desktop only). */
+.pokedex-swing {
+  position: relative;
+  will-change: transform, opacity;
+  animation: pokedex-rise-in 0.5s var(--ease-smooth) both;
+}
+.pokedex-swing[data-closing] {
+  animation: pokedex-drop-out 0.42s var(--ease-smooth) 0.16s both;
+}
+
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modal-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes pokedex-rise-in {
+  from { opacity: 0; transform: translateY(40px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes pokedex-drop-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(64px) scale(0.98); }
+}
+
+/* Desktop: the right leaf is a hinged lid. Perspective sits on the grid so the
+   flap gets real depth as it swings around the spine (its left edge). */
+@media (min-width: 1024px) {
+  .pokedex-leaves {
+    perspective: 2000px;
+  }
+  .pokedex-flap {
+    transform-origin: left center;
+    backface-visibility: hidden;
+    border-radius: 4px var(--radius-card) var(--radius-card) 4px;
+    padding: 2px 0 6px;
+    background: linear-gradient(158deg, #f65454 0%, #e02b2b 40%, #b81b1f 78%, #8f1216 100%);
+    box-shadow:
+      inset 0 2px 0 rgba(255, 255, 255, 0.26),
+      inset -4px 0 10px rgba(90, 8, 12, 0.4),
+      inset 0 -5px 10px rgba(90, 8, 12, 0.45),
+      -6px 0 14px rgba(60, 6, 9, 0.3);
+    animation: pokedex-lid-open 0.62s var(--ease-out-back) 0.06s both;
+  }
+  .dark .pokedex-flap {
+    background: linear-gradient(158deg, #d13a3f 0%, #b21d22 42%, #8f1418 80%, #6f0f13 100%);
+  }
+  .pokedex-swing[data-closing] .pokedex-flap {
+    animation: pokedex-lid-close 0.34s var(--ease-smooth) both;
+  }
+  @keyframes pokedex-lid-open {
+    from { transform: rotateY(-105deg); }
+    to { transform: rotateY(0deg); }
+  }
+  @keyframes pokedex-lid-close {
+    from { transform: rotateY(0deg); }
+    to { transform: rotateY(-105deg); }
+  }
+}
+
+/* Respect reduced-motion — cross-fade, no rise or hinge swing. */
+@media (prefers-reduced-motion: reduce) {
+  .pokedex-swing,
+  .pokedex-flap {
+    animation: modal-fade-in 0.3s var(--ease-smooth) both;
+  }
+  .pokedex-swing[data-closing],
+  .pokedex-swing[data-closing] .pokedex-flap {
+    animation: modal-fade-out 0.24s var(--ease-smooth) both;
+  }
+}
+
 /* Skeleton shimmer */
 .skeleton {
   position: relative;

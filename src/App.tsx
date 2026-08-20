@@ -3,7 +3,7 @@ import { useThemeEffect } from '@/hooks/useThemeEffect'
 import { ScrollToTop } from '@/components/layout/ScrollToTop'
 import { CompareTray } from '@/components/compare/CompareTray'
 import { Home } from '@/pages/Home'
-import { PokemonDetail } from '@/pages/PokemonDetail'
+import { PokedexModal } from '@/components/pokemon/detail/PokedexModal'
 import { NotFound } from '@/pages/NotFound'
 
 export default function App() {
@@ -14,8 +14,12 @@ export default function App() {
       <ScrollToTop />
       <main className="flex-1">
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/pokemon/:name" element={<PokemonDetail />} />
+          <Route path="/" element={<Home />}>
+            {/* The detail view is a modal over the grid — Home stays mounted
+                underneath so the URL, deep links and refreshes all resolve to
+                the grid with the Pokédex open on top. */}
+            <Route path="pokemon/:name" element={<PokedexModal />} />
+          </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
