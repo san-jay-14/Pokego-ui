@@ -94,27 +94,27 @@ export function usePokemonDetails(entries: PokemonIndexEntry[]): PokemonDetailsB
 }
 
 /** Species-level flavor data. Enabled once we know the name/id. */
-export function usePokemonSpecies(nameOrId: string | number | undefined) {
+export function usePokemonSpecies(nameOrId: string | number | undefined, enabled = true) {
   return useQuery({
     queryKey: pokemonKeys.species(nameOrId ?? ''),
     queryFn: ({ signal }) => fetchPokemonSpecies(nameOrId as string | number, signal),
-    enabled: nameOrId != null && nameOrId !== '',
+    enabled: enabled && nameOrId != null && nameOrId !== '',
     staleTime: Infinity,
   })
 }
 
 /** Evolution chain, resolved from the species' chain url. */
-export function useEvolutionChain(url: string | undefined) {
+export function useEvolutionChain(url: string | undefined, enabled = true) {
   return useQuery({
     queryKey: pokemonKeys.evolution(url ?? ''),
     queryFn: ({ signal }) => fetchEvolutionChain(url as string, signal),
-    enabled: Boolean(url),
+    enabled: enabled && Boolean(url),
     staleTime: Infinity,
   })
 }
 
 /** Net type effectiveness for a Pokémon's (one or two) types. */
-export function useTypeEffectiveness(types: string[]): {
+export function useTypeEffectiveness(types: string[], enabled = true): {
   data: TypeEffectiveness | undefined
   isLoading: boolean
 } {
@@ -122,6 +122,7 @@ export function useTypeEffectiveness(types: string[]): {
     queries: types.map((type) => ({
       queryKey: pokemonKeys.typeDetail(type),
       queryFn: ({ signal }: { signal: AbortSignal }) => fetchTypeDetail(type, signal),
+      enabled,
       staleTime: Infinity,
     })),
   })
@@ -140,11 +141,12 @@ export function useTypeEffectiveness(types: string[]): {
 }
 
 /** Batch move details (real power/accuracy/PP/type/class), preserving input order. */
-export function useMoveDetails(names: string[]) {
+export function useMoveDetails(names: string[], enabled = true) {
   const results = useQueries({
     queries: names.map((name) => ({
       queryKey: pokemonKeys.move(name),
       queryFn: ({ signal }: { signal: AbortSignal }) => fetchMove(name, signal),
+      enabled,
       staleTime: Infinity,
     })),
   })

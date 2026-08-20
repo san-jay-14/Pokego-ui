@@ -20,12 +20,12 @@ export function DPad({ onUp, onDown, onLeft, onRight }: DPadProps) {
       }}
     >
       <span aria-hidden="true" />
-      <DPadButton label="Previous data page" onClick={onUp} rounded="rounded-t-md">
+      <DPadButton label="Previous section" onClick={onUp} rounded="rounded-t-md">
         <ChevronUp className="h-3.5 w-3.5" strokeWidth={3} />
       </DPadButton>
       <span aria-hidden="true" />
 
-      <DPadButton label="Previous data page" onClick={onLeft} rounded="rounded-l-md">
+      <DPadButton label="Previous section" onClick={onLeft} rounded="rounded-l-md">
         <ChevronLeft className="h-3.5 w-3.5" strokeWidth={3} />
       </DPadButton>
       <span
@@ -36,12 +36,12 @@ export function DPad({ onUp, onDown, onLeft, onRight }: DPadProps) {
           boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.8)',
         }}
       />
-      <DPadButton label="Next data page" onClick={onRight} rounded="rounded-r-md">
+      <DPadButton label="Next section" onClick={onRight} rounded="rounded-r-md">
         <ChevronRight className="h-3.5 w-3.5" strokeWidth={3} />
       </DPadButton>
 
       <span aria-hidden="true" />
-      <DPadButton label="Next data page" onClick={onDown} rounded="rounded-b-md">
+      <DPadButton label="Next section" onClick={onDown} rounded="rounded-b-md">
         <ChevronDown className="h-3.5 w-3.5" strokeWidth={3} />
       </DPadButton>
       <span aria-hidden="true" />

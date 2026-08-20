@@ -7,7 +7,7 @@ import { getTypeConfig } from '@/constants/pokemonTypes'
 import { getTypeBackground } from '@/constants/typeBackgrounds'
 import { formatDexId, formatName, formatHeightImperial, formatWeightImperial, getArtwork, getStat, primaryType } from '@/utils/pokemon'
 import { energyCostForPower, retreatCost, weaknessFor } from '@/utils/tcg'
-import { getClassification, getGenus, type Classification } from '@/utils/species'
+import { getClassification, getGenus, getMovesByMethod, type Classification } from '@/utils/species'
 import { formatMultiplier } from '@/utils/typeEffectiveness'
 import { idFromUrl } from '@/services/pokemonApi'
 import {
@@ -19,6 +19,7 @@ import {
 import { EnergyPip } from './EnergyPip'
 import { useAppStore } from '@/store/useAppStore'
 import { useHoloPointer } from '@/hooks/useHoloPointer'
+import { useInView } from '@/hooks/useInView'
 
 interface PokemonCardProps {
   pokemon: Pokemon
@@ -63,13 +64,24 @@ export const PokemonCard = memo(function PokemonCard({ pokemon, index = 0 }: Pok
   const retreat = retreatCost(pokemon.weight)
   const holo = useHoloPointer()
 
+  // The card's TCG "flavor" (classification, genus, weakness, move power) is
+  // enriched with several extra requests — only fire them once the card scrolls
+  // into view so the grid doesn't fetch hundreds of records up front.
+  const { ref: inViewRef, inView } = useInView<HTMLDivElement>()
+
   // Live data for original stats + classification + genus.
-  const species = usePokemonSpecies(pokemon.id)
-  const evolution = useEvolutionChain(species.data?.evolution_chain.url)
+  const species = usePokemonSpecies(pokemon.id, inView)
+  const evolution = useEvolutionChain(species.data?.evolution_chain.url, inView)
   const typeNames = useMemo(() => pokemon.types.map((t) => t.type.name), [pokemon])
-  const effectiveness = useTypeEffectiveness(typeNames)
-  const attackNames = useMemo(() => pokemon.moves.slice(0, 2).map((m) => m.move.name), [pokemon])
-  const moves = useMoveDetails(attackNames)
+  const effectiveness = useTypeEffectiveness(typeNames, inView)
+  // Prefer the Pokémon's characteristic early level-up moves over the arbitrary
+  // API order, so the two "attacks" shown are actually meaningful.
+  const attackNames = useMemo(() => {
+    const levelUp = getMovesByMethod(pokemon, 'level-up').map((m) => m.name)
+    const fallback = pokemon.moves.map((m) => m.move.name)
+    return Array.from(new Set([...levelUp, ...fallback])).slice(0, 2)
+  }, [pokemon])
+  const moves = useMoveDetails(attackNames, inView)
 
   const genus = species.data ? getGenus(species.data) : `${cfg.label} Pokémon`
   const classification = getClassification(species.data, evolution.data, pokemon.name)
@@ -93,6 +105,7 @@ export const PokemonCard = memo(function PokemonCard({ pokemon, index = 0 }: Pok
 
   return (
     <div
+      ref={inViewRef}
       className="group/card animate-pop-in relative [perspective:1200px]"
       style={{ animationDelay: `${Math.min(index, 12) * 35}ms` }}
     >
@@ -283,8 +296,9 @@ export const PokemonCard = memo(function PokemonCard({ pokemon, index = 0 }: Pok
         <div className="tcg-glare" style={{ opacity: holo.active ? 0.7 : 0 }} />
       </Link>
 
-      {/* Floating controls */}
-      <div className="absolute right-[6%] top-[5.5%] z-30 flex gap-1 opacity-0 transition-opacity duration-200 focus-within:opacity-100 group-hover/card:opacity-100">
+      {/* Floating controls — hidden until hover/focus on pointer devices, but
+          always visible on touch devices (which have no hover state). */}
+      <div className="absolute right-[6%] top-[5.5%] z-30 flex gap-1 opacity-0 transition-opacity duration-200 focus-within:opacity-100 group-hover/card:opacity-100 [@media(hover:none)]:opacity-100">
         <CornerButton
           active={isFavorite}
           activeClass="bg-danger text-white"

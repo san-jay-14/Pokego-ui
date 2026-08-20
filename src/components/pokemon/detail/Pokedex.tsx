@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { ChevronLeft, ChevronRight, Crown, Sparkles, Star, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Crown, Scale, Sparkles, Star, X } from 'lucide-react'
 import type {
   AbilityDetail,
   EvolutionChain as EvolutionChainType,
@@ -12,6 +12,7 @@ import { formatDexId, formatName } from '@/utils/pokemon'
 import { LOCALIZED_LANGUAGES } from '@/utils/species'
 import type { TypeEffectiveness } from '@/utils/typeEffectiveness'
 import { FavoriteButton } from '@/components/favorites/FavoriteButton'
+import { useAppStore } from '@/store/useAppStore'
 import { PokedexEntry } from './PokedexEntry'
 import { SpriteViewer } from './device/SpriteViewer'
 import { TypeButtons } from './device/TypeButtons'
@@ -157,6 +158,7 @@ export function Pokedex(props: PokedexProps) {
               </span>
             )}
             <FavoriteButton id={base.id} name={base.name} size="sm" />
+            <CompareButton id={base.id} name={base.name} />
             {active.cries?.latest && <DeviceCry src={active.cries.latest} name={active.name} />}
           </div>
 
@@ -305,6 +307,29 @@ function LensEye({ onClose }: { onClose?: () => void }) {
       style={ringStyle}
     >
       {inner}
+    </button>
+  )
+}
+
+/** Compare toggle for the device status bar — mirrors FavoriteButton so the
+ *  detail view is a full entry point for building a head-to-head. */
+function CompareButton({ id, name }: { id: number; name: string }) {
+  const isComparing = useAppStore((s) => s.compare.includes(id))
+  const toggleCompare = useAppStore((s) => s.toggleCompare)
+  return (
+    <button
+      type="button"
+      onClick={() => toggleCompare(id)}
+      aria-pressed={isComparing}
+      aria-label={isComparing ? `Remove ${name} from compare` : `Add ${name} to compare`}
+      title={isComparing ? 'Remove from compare' : 'Add to compare'}
+      className={`grid h-9 w-9 place-items-center rounded-full border backdrop-blur-sm transition-all duration-200 active:scale-90 ${
+        isComparing
+          ? 'border-transparent bg-primary/20 text-primary'
+          : 'border-border bg-surface/70 text-muted hover:border-primary/40 hover:text-primary'
+      }`}
+    >
+      <Scale className="h-[18px] w-[18px]" strokeWidth={2.2} />
     </button>
   )
 }

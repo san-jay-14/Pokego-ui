@@ -26,7 +26,7 @@ export function MoveBrowser({ pokemon }: { pokemon: Pokemon }) {
   const available = METHODS.filter((m) => byMethod[m.method].length > 0)
   const [method, setMethod] = useState<LearnMethod>('level-up')
   const activeMethod = available.some((a) => a.method === method) ? method : available[0]?.method ?? 'level-up'
-  const moves = byMethod[activeMethod] ?? []
+  const moves = useMemo(() => byMethod[activeMethod] ?? [], [byMethod, activeMethod])
 
   const [index, setIndex] = useState(0)
   const safeIndex = moves.length ? Math.min(index, moves.length - 1) : 0

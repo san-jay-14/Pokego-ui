@@ -8,10 +8,10 @@ import {
   useTransform,
 } from "motion/react"
 
-import clsx from "clsx"
+import clsx, { type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
-const cn = (...args: any[]) => twMerge(clsx(args))
+const cn = (...args: ClassValue[]) => twMerge(clsx(args))
 
 export interface AnimatedDockProps {
   className?: string

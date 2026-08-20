@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, Swords, Trash2 } from 'lucide-react'
 import type { Pokemon } from '@/types/pokemon'
@@ -205,8 +204,8 @@ function PromptSlot({
 function EmptySlot({ side }: { side: 'a' | 'b' }) {
   const isB = side === 'b'
   const pad = isB ? 'pl-5 sm:pl-10' : 'pr-5 sm:pr-10'
-  // A stable random silhouette to tease the empty slot.
-  const teaseId = useMemo(() => Math.floor(Math.random() * 493) + 1, [])
+  // A fixed silhouette per side so the tease stays stable across visits.
+  const teaseId = isB ? 6 : 3
 
   return (
     <div className={`${SLOT_FRAME} ${pad}`}>

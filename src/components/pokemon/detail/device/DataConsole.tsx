@@ -15,8 +15,9 @@ const PAGES = ['Stats', 'Profile', 'Breeding', 'Abilities'] as const
 
 /**
  * Metal-framed console: D-pad on the left, one shared LCD screen on the
- * right. The pad pages through Stats/Profile/Breeding/Abilities instead of
- * stacking every readout at once.
+ * right. The pad — or the labelled tabs across the top of the screen — pages
+ * through Stats/Profile/Breeding/Abilities (height, weight and abilities live
+ * here), so the sections are visible and reachable by pointer and keyboard.
  */
 export function DataConsole({ pokemon, species, abilityDetails }: DataConsoleProps) {
   const [pageIndex, setPageIndex] = useState(0)
@@ -29,25 +30,36 @@ export function DataConsole({ pokemon, species, abilityDetails }: DataConsolePro
       <DPad onUp={() => step(-1)} onDown={() => step(1)} onLeft={() => step(-1)} onRight={() => step(1)} />
 
       <LcdScreen className="flex h-[130px] flex-1 flex-col px-3 py-1.5 sm:h-[150px]">
-        <div className="mb-1 flex items-center justify-between border-b border-[#26340f]/30 pb-0.5">
-          <h4
-            className="text-[0.65rem] font-bold uppercase tracking-[0.18em]"
-            style={{ fontFamily: 'var(--font-lcd)' }}
-          >
-            {page}
-          </h4>
-          <div className="flex gap-1" aria-hidden="true">
-            {PAGES.map((p, i) => (
-              <span
+        <div
+          className="no-scrollbar -mx-1 mb-1 flex items-center gap-1 overflow-x-auto border-b border-[#26340f]/30 px-1 pb-1"
+          role="tablist"
+          aria-label="Pokédex data sections"
+        >
+          {PAGES.map((p, i) => {
+            const selected = i === pageIndex
+            return (
+              <button
                 key={p}
-                className={`h-1.5 w-1.5 rounded-full transition-colors ${
-                  i === pageIndex ? 'bg-[#26340f]/70' : 'bg-[#26340f]/25'
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => setPageIndex(i)}
+                className={`shrink-0 rounded px-1.5 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.12em] transition-colors ${
+                  selected ? 'bg-[#26340f]/70 text-[#cfe08a]' : 'text-[#26340f]/60 hover:text-[#26340f]'
                 }`}
-              />
-            ))}
-          </div>
+                style={{ fontFamily: 'var(--font-lcd)' }}
+              >
+                {p}
+              </button>
+            )
+          })}
         </div>
-        <div className="no-scrollbar flex-1 overflow-y-auto" style={{ fontFamily: 'var(--font-lcd)' }}>
+        <div
+          className="no-scrollbar flex-1 overflow-y-auto"
+          style={{ fontFamily: 'var(--font-lcd)' }}
+          role="tabpanel"
+          aria-label={page}
+        >
           {page === 'Stats' && <StatsFields pokemon={pokemon} size="compact" />}
           {page === 'Profile' && <ProfileFields pokemon={pokemon} species={species} size="compact" />}
           {page === 'Breeding' && <BreedingFields species={species} size="compact" />}

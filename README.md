@@ -17,7 +17,7 @@ to loading, error and empty states.
 - **Browse** — responsive card grid, 20 Pokémon per page via **Load More** (appends, never replaces)
 - **Search** — instant substring search across the entire dex (name or dex number), debounced
 - **Type filter** — filter by any of the 18 types; horizontally scrollable on mobile, wraps on desktop
-- **Detail pages** — large artwork, types, height, weight, abilities (incl. hidden), animated base-stat bars and move list, at a shareable URL (`/pokemon/pikachu`)
+- **Detail view** — a skeuomorphic Pokédex "device" (modal at a shareable URL, `/pokemon/pikachu`) with large artwork, types, a Pokédex flavor entry, proportional base-stat bars, height/weight/abilities/breeding on a tabbed console, evolution chain, type matchups and a browsable move list
 - **Type-based styling** — centralized type configuration drives colours, gradients and glyphs everywhere
 - **States** — skeleton loaders with shimmer, actionable error states with retry, and helpful empty states
 - **Responsive** — designed mobile-first for 375px → 1920px with no horizontal overflow
@@ -78,21 +78,25 @@ npm run preview  # preview the production build
 ```
 src/
 ├── components/
-│   ├── layout/       Header, PageContainer, ThemeToggle, ScrollToTop
-│   ├── pokemon/      PokemonCard, PokemonGrid, TypeBadge, StatBars, PokemonArtwork
+│   ├── layout/       HeroDock, PageContainer, ThemeToggle, ScrollToTop
+│   ├── pokemon/      PokemonCard, PokemonGrid, EnergyPip
+│   │   └── detail/   Pokedex, PokedexModal, PokedexEntry
+│   │       └── device/   DataConsole, DPad, StatsFields, DataScreens,
+│   │                     SpriteViewer, MoveBrowser, EvolutionRail,
+│   │                     TypeButtons, LcdScreen, DeviceNav, DeviceCry, FormSelector
 │   ├── search/       SearchBar
 │   ├── filters/      TypeFilter, SortControl
-│   ├── states/       CardSkeleton, DetailSkeleton, ErrorState, EmptyState
+│   ├── states/       CardSkeleton, ErrorState, EmptyState
 │   ├── favorites/    FavoriteButton
-│   ├── compare/      CompareTray, CompareView
-│   └── ui/           Button, Modal, PokeballSpinner
-├── pages/            Home, PokemonDetail, NotFound
+│   ├── compare/      CompareTray, BattleArena, FighterPicker
+│   └── ui/           Button, Dropdown, PokeballIcon, PokeballSpinner, animated-dock
+├── pages/            Home, Battlefield, NotFound
 ├── services/         pokemonApi.ts        (all fetch calls + typed errors)
-├── hooks/            usePokemonData, useDebouncedValue, useThemeEffect
+├── hooks/            usePokemonData, useDebouncedValue, useThemeEffect, useInView, useHoloPointer
 ├── store/            useAppStore.ts       (Zustand: theme, favourites, compare)
-├── constants/        pokemonTypes.ts, sort.ts
+├── constants/        pokemonTypes.ts, sort.ts, typeBackgrounds.ts
 ├── types/            pokemon.ts           (PokéAPI response types)
-├── utils/            pokemon.ts           (formatting, artwork, stats)
+├── utils/            pokemon.ts, species.ts, tcg.ts, typeEffectiveness.ts
 ├── lib/              queryClient.ts
 ├── App.tsx  ·  main.tsx  ·  index.css     (design tokens)
 ```
@@ -126,15 +130,31 @@ search responsive across all ~1,300 Pokémon.
 ## Future Improvements
 
 - Virtualized grid for very large filtered sets
-- Evolution chains and type-matchup (weakness/resistance) data on the detail page
+- Global stat sorting across the whole dex (today stat sorts rank the loaded window)
 - Shareable compare URLs (`/compare/pikachu/charizard`)
 - Optional infinite scroll alongside Load More
 - Offline caching via a service worker
 
 ## Screenshots
 
-_Add screenshots of the home grid, a detail page, dark mode and the compare view here._
+Place captures in `docs/screenshots/` and reference them here:
+
+| Home grid (light) | Home grid (dark) |
+| --- | --- |
+| ![Home grid, light theme](docs/screenshots/home-light.png) | ![Home grid, dark theme](docs/screenshots/home-dark.png) |
+
+| Pokédex detail | Battlefield compare |
+| --- | --- |
+| ![Pokédex detail device](docs/screenshots/detail.png) | ![Battlefield head-to-head](docs/screenshots/compare.png) |
 
 ## Live Demo
 
-_Add the deployed URL here (e.g. Vercel / Netlify)._
+**https://<your-deployment>.vercel.app** — deploy with:
+
+```bash
+npm run build      # outputs dist/ (Vite SPA)
+```
+
+Any static host works (Vercel, Netlify, GitHub Pages, Cloudflare Pages). For SPA
+deep links (`/pokemon/pikachu`, `/battlefield`) to resolve on refresh, enable a
+catch-all rewrite to `index.html` (Vercel/Netlify do this for Vite SPAs by default).

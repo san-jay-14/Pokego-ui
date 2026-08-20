@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AnimationEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { Pokemon } from '@/types/pokemon'
@@ -28,20 +28,64 @@ export function PokedexModal() {
   const { name } = useParams<{ name: string }>()
   const navigate = useNavigate()
   const [closing, setClosing] = useState(false)
+  const stageRef = useRef<HTMLDivElement>(null)
 
   const close = useCallback(() => setClosing(true), [])
 
-  // Escape to close + lock the background scroll while the device is open.
+  // Escape to close, lock background scroll, and keep keyboard focus inside the
+  // dialog (trap Tab), restoring focus to the element that opened it on close.
   useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null
+    const stage = stageRef.current
+
+    const focusables = () =>
+      Array.from(
+        stage?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((el) => el.offsetParent !== null)
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setClosing(true)
+      if (e.key === 'Escape') {
+        setClosing(true)
+        return
+      }
+      if (e.key !== 'Tab') return
+      const items = focusables()
+      if (items.length === 0) return
+      const first = items[0]
+      const last = items[items.length - 1]
+      const activeEl = document.activeElement as HTMLElement | null
+      if (e.shiftKey && activeEl === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && activeEl === last) {
+        e.preventDefault()
+        first.focus()
+      } else if (activeEl && !stage?.contains(activeEl)) {
+        e.preventDefault()
+        first.focus()
+      }
     }
+
     document.addEventListener('keydown', onKey)
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
+    // Move focus into the dialog. Content loads async (a spinner shows first),
+    // so focus the container itself — Tab then reaches the close control once
+    // the device has rendered. A short timeout lets the first paint settle.
+    const focusTimer = window.setTimeout(() => (focusables()[0] ?? stage)?.focus(), 60)
+
     return () => {
+      window.clearTimeout(focusTimer)
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = prevOverflow
+      // Only hand focus back to the opener if focus is still inside the dialog,
+      // so we restore on a real close but never yank it during React's
+      // dev-mode remount (which briefly unmounts while focus is elsewhere).
+      if (opener && opener.isConnected && stage?.contains(document.activeElement)) {
+        opener.focus()
+      }
     }
   }, [])
 
@@ -61,7 +105,7 @@ export function PokedexModal() {
       aria-modal="true"
       aria-label="Pokédex entry"
     >
-      <div className="pokedex-modal-stage">
+      <div className="pokedex-modal-stage outline-none" ref={stageRef} tabIndex={-1}>
         <div
           className="pokedex-swing"
           data-closing={closing || undefined}
