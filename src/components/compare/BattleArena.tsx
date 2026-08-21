@@ -1,10 +1,11 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Crown, Replace } from 'lucide-react'
+import { Crown, Replace, Sparkles, Star, type LucideIcon } from 'lucide-react'
 import type { Pokemon, PokemonTypeName } from '@/types/pokemon'
 import { getTypeConfig } from '@/constants/pokemonTypes'
 import { getTypeBackground } from '@/constants/typeBackgrounds'
-import { useTypeEffectiveness } from '@/hooks/usePokemonData'
+import { useEvolutionChain, usePokemonSpecies, useTypeEffectiveness } from '@/hooks/usePokemonData'
+import { getClassification, type Classification } from '@/utils/species'
 import {
   MAX_STAT,
   STAT_META,
@@ -195,6 +196,14 @@ export function Fighter({
 }) {
   const isB = side === 'b'
   const animated = hasAnimatedSprite(pokemon)
+
+  // Rarity / evolution stage for the banner badge and legendary/mythical FX.
+  const species = usePokemonSpecies(pokemon.id)
+  const evolution = useEvolutionChain(species.data?.evolution_chain.url)
+  const classification = getClassification(species.data, evolution.data, pokemon.name)
+  const tone = classification?.tone ?? 'neutral'
+  const showFx = tone === 'legendary' || tone === 'mythical'
+
   return (
     <div
       className={`relative flex min-h-[290px] flex-col px-2 pb-4 pt-4 sm:min-h-[360px] sm:pb-5 ${
@@ -208,6 +217,9 @@ export function Fighter({
           {String(pokemon.id).padStart(3, '0')}
         </span>
       </div>
+
+      {/* Legendary / mythical aura + sparkles, behind the sprite */}
+      {showFx && <RarityFx tone={tone as 'legendary' | 'mythical'} />}
 
       {/* Sprite */}
       <div className="relative z-10 flex flex-1 items-center justify-center">
@@ -231,9 +243,11 @@ export function Fighter({
 
       {/* Identity */}
       <div className="relative z-10 mt-2 flex flex-col items-center gap-1.5">
+        {classification && <RarityBadge classification={classification} />}
         <Link
           to={`/pokemon/${pokemon.name}`}
           className="text-base font-black uppercase tracking-wide text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.7)] hover:underline sm:text-xl"
+          style={nameGlow(tone)}
         >
           {formatName(pokemon.name)}
         </Link>
@@ -256,6 +270,86 @@ export function Fighter({
         <Replace className="h-4 w-4" strokeWidth={2.4} />
       </button>
     </div>
+  )
+}
+
+/** Positions for the twinkling sparkles around a legendary / mythical sprite. */
+const SPARK_POSITIONS = [
+  { left: '22%', top: '28%', delay: '0s' },
+  { left: '74%', top: '24%', delay: '0.5s' },
+  { left: '32%', top: '60%', delay: '1s' },
+  { left: '68%', top: '56%', delay: '0.3s' },
+  { left: '50%', top: '18%', delay: '0.8s' },
+  { left: '46%', top: '72%', delay: '1.3s' },
+]
+
+/** Pulsing aura + drifting sparkles rendered behind a rare fighter's sprite. */
+function RarityFx({ tone }: { tone: 'legendary' | 'mythical' }) {
+  return (
+    <div
+      className={`rarity-fx pointer-events-none absolute inset-0 z-0 ${
+        tone === 'legendary' ? 'legendary-fx' : 'mythical-fx'
+      }`}
+      aria-hidden="true"
+    >
+      {SPARK_POSITIONS.map((p, i) => (
+        <span key={i} className="rarity-spark" style={{ left: p.left, top: p.top, animationDelay: p.delay }} />
+      ))}
+    </div>
+  )
+}
+
+/** Name glow that matches the rarity aura (gold / prismatic), plain otherwise. */
+function nameGlow(tone: Classification['tone']): CSSProperties | undefined {
+  if (tone === 'legendary') {
+    return { color: '#ffe08a', textShadow: '0 0 12px rgba(255,200,80,0.7), 0 2px 4px rgba(0,0,0,0.8)' }
+  }
+  if (tone === 'mythical') {
+    return { color: '#ffd7f4', textShadow: '0 0 12px rgba(210,130,255,0.75), 0 2px 4px rgba(0,0,0,0.8)' }
+  }
+  return undefined
+}
+
+/** The banner rarity / stage chip (Legendary, Mythical, Baby, or Basic/Stage 1/2). */
+function RarityBadge({ classification }: { classification: Classification }) {
+  const { tone, label } = classification
+  if (tone === 'legendary') {
+    return (
+      <RarityChip Icon={Crown} label={label} style={{ background: 'linear-gradient(135deg,#ffe9a8,#e0a416)', color: '#4a3400' }} />
+    )
+  }
+  if (tone === 'mythical') {
+    return (
+      <RarityChip Icon={Star} label={label} className="tcg-rainbow-foil" style={{ color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.55)' }} />
+    )
+  }
+  if (tone === 'baby') {
+    return (
+      <RarityChip Icon={Sparkles} label={label} style={{ background: 'linear-gradient(135deg,#8fe0d6,#2f9c8f)', color: '#053033' }} />
+    )
+  }
+  return <RarityChip label={label} style={{ background: 'rgba(0,0,0,0.45)', color: 'rgba(255,255,255,0.92)' }} />
+}
+
+function RarityChip({
+  Icon,
+  label,
+  className = '',
+  style,
+}: {
+  Icon?: LucideIcon
+  label: string
+  className?: string
+  style?: CSSProperties
+}) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[0.62rem] font-black uppercase tracking-wide shadow-[0_1px_3px_rgba(0,0,0,0.45)] ring-1 ring-white/25 ${className}`}
+      style={style}
+    >
+      {Icon && <Icon className="h-3 w-3 shrink-0" strokeWidth={2.6} />}
+      {label}
+    </span>
   )
 }
 

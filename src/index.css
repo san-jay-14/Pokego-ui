@@ -788,6 +788,65 @@
   filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.4));
 }
 
+/* Legendary / mythical fighter treatment — a pulsing aura and drifting sparkles
+   behind the sprite (gold for legendary, prismatic for mythical). */
+.rarity-fx {
+  overflow: hidden;
+}
+.rarity-fx::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: 80%;
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  filter: blur(4px);
+}
+.legendary-fx::before {
+  background: radial-gradient(circle, rgba(255, 214, 110, 0.6), rgba(255, 186, 54, 0.22) 46%, transparent 68%);
+  animation: rarity-pulse 3s ease-in-out infinite;
+}
+.mythical-fx::before {
+  background: radial-gradient(circle, rgba(255, 120, 205, 0.5), rgba(120, 175, 255, 0.3) 44%, transparent 68%);
+  animation: rarity-pulse 3.4s ease-in-out infinite;
+}
+@keyframes rarity-pulse {
+  0%, 100% { opacity: 0.65; transform: translate(-50%, -50%) scale(0.95); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+}
+.rarity-spark {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 20%, rgba(255, 255, 255, 0) 72%);
+  opacity: 0;
+  animation: rarity-twinkle 2.2s ease-in-out infinite;
+}
+.legendary-fx .rarity-spark {
+  box-shadow: 0 0 7px 2px rgba(255, 206, 84, 0.95);
+}
+.mythical-fx .rarity-spark {
+  box-shadow: 0 0 7px 2px rgba(198, 140, 255, 0.95);
+}
+@keyframes rarity-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.3); }
+  45%, 55% { opacity: 1; transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .legendary-fx::before,
+  .mythical-fx::before {
+    animation: none;
+    opacity: 0.8;
+  }
+  .rarity-spark {
+    animation: none;
+    opacity: 0.55;
+  }
+}
+
 /* Skeleton shimmer */
 .skeleton {
   position: relative;
