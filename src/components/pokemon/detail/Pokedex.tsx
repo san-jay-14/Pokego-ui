@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { ChevronLeft, ChevronRight, Crown, Scale, Sparkles, Star, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Crown, HelpCircle, Scale, Sparkles, Star, X } from 'lucide-react'
 import type {
   AbilityDetail,
   EvolutionChain as EvolutionChainType,
@@ -22,6 +22,7 @@ import { DeviceNav } from './device/DeviceNav'
 import { DeviceCry } from './device/DeviceCry'
 import { DataConsole } from './device/DataConsole'
 import { FormSelector } from './device/FormSelector'
+import { PokedexTour, TOUR_SEEN_KEY } from './PokedexTour'
 
 interface PokedexProps {
   base: Pokemon
@@ -67,6 +68,32 @@ export function Pokedex(props: PokedexProps) {
   const rarity = RARITY[tone]
   const holo = tone === 'legendary' || tone === 'mythical'
   const hasForms = (species?.varieties.length ?? 0) > 1
+
+  // First-time visitors get Ash's guided walkthrough automatically; everyone
+  // can re-run it from the ? control. The device animates open first, so the
+  // auto-start waits a beat for the layout to settle before measuring targets.
+  const [tourOpen, setTourOpen] = useState(false)
+  useEffect(() => {
+    let seen = false
+    try {
+      seen = localStorage.getItem(TOUR_SEEN_KEY) === '1'
+    } catch {
+      seen = true // storage blocked (private mode) — don't nag on every open
+    }
+    if (seen) return
+    const t = window.setTimeout(() => setTourOpen(true), 750)
+    return () => window.clearTimeout(t)
+  }, [])
+
+  const startTour = useCallback(() => setTourOpen(true), [])
+  const endTour = useCallback(() => {
+    setTourOpen(false)
+    try {
+      localStorage.setItem(TOUR_SEEN_KEY, '1')
+    } catch {
+      /* ignore storage failures */
+    }
+  }, [])
 
   const [nameIndex, setNameIndex] = useState(0)
   const nameEntries = useMemo(() => {
@@ -160,9 +187,10 @@ export function Pokedex(props: PokedexProps) {
             <FavoriteButton id={base.id} name={base.name} size="sm" />
             <CompareButton id={base.id} name={base.name} />
             {active.cries?.latest && <DeviceCry src={active.cries.latest} name={active.name} />}
+            <HelpButton onClick={startTour} />
           </div>
 
-          <div className="lcd mx-auto flex w-[85%] min-w-[210px] items-center gap-1.5 rounded-lg px-2 py-1" style={{ fontFamily: 'var(--font-lcd)' }}>
+          <div data-tour="name" className="lcd mx-auto flex w-[85%] min-w-[210px] items-center gap-1.5 rounded-lg px-2 py-1" style={{ fontFamily: 'var(--font-lcd)' }}>
             {nameEntries.length > 1 && (
               <button
                 type="button"
@@ -186,15 +214,15 @@ export function Pokedex(props: PokedexProps) {
             )}
             <span className="tabular shrink-0 text-base opacity-70">No. {base.id}</span>
           </div>
-          <div className="mx-auto w-[85%] min-w-[210px]">
+          <div data-tour="sprite" className="mx-auto w-[85%] min-w-[210px]">
             <SpriteViewer pokemon={active} dexId={base.id} holo={holo} />
           </div>
 
           <div className="mx-auto flex w-[85%] min-w-[210px] items-start gap-2">
-            <div className="min-w-0 flex-1">
+            <div data-tour="entry" className="min-w-0 flex-1">
               <PokedexEntry species={species} />
             </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <div data-tour="types" className="flex min-w-0 flex-1 flex-col gap-1.5">
               <TypeButtons types={active.types} />
               {hasForms && (
                 <FormSelector
@@ -227,12 +255,14 @@ export function Pokedex(props: PokedexProps) {
           <div className="mx-auto flex w-[85%] min-w-[210px] flex-col gap-2.5">
             <DataConsole pokemon={active} species={species} abilityDetails={props.abilityDetails} />
 
-            <RailLabel>Evolution</RailLabel>
-            <EvolutionRail
-              chain={props.evolution}
-              isLoading={props.speciesLoading || props.evolutionLoading}
-              currentId={base.id}
-            />
+            <div data-tour="evolution" className="flex flex-col gap-2.5">
+              <RailLabel>Evolution</RailLabel>
+              <EvolutionRail
+                chain={props.evolution}
+                isLoading={props.speciesLoading || props.evolutionLoading}
+                currentId={base.id}
+              />
+            </div>
 
             {/* Decorative control bar — echoes the classic device's button strip */}
             <div aria-hidden="true" className="mt-1.5 flex items-center justify-center gap-1">
@@ -241,14 +271,36 @@ export function Pokedex(props: PokedexProps) {
               ))}
             </div>
 
-            <RailLabel>Moves</RailLabel>
-            <MoveBrowser pokemon={active} />
+            <div data-tour="moves" className="flex flex-col gap-2.5">
+              <RailLabel>Moves</RailLabel>
+              <MoveBrowser pokemon={active} />
+            </div>
 
-            <DeviceNav id={base.id} />
+            <div data-tour="nav">
+              <DeviceNav id={base.id} />
+            </div>
           </div>
         </div>
       </div>
+
+      <PokedexTour open={tourOpen} onClose={endTour} />
     </section>
+  )
+}
+
+/** The ? control in the status bar — (re)launches Ash's guided tour. */
+function HelpButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      data-tour="help"
+      onClick={onClick}
+      aria-label="Take a guided tour of the Pokédex"
+      title="Take a tour"
+      className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/25 bg-white/10 text-white shadow-[var(--shadow-sm)] ring-1 ring-black/10 backdrop-blur-sm transition-all duration-200 hover:bg-white/20 active:scale-90"
+    >
+      <HelpCircle className="h-[18px] w-[18px]" strokeWidth={2.4} />
+    </button>
   )
 }
 

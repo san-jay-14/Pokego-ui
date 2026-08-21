@@ -26,7 +26,10 @@ export function DataConsole({ pokemon, species, abilityDetails }: DataConsolePro
   const step = (delta: number) => setPageIndex((i) => (i + delta + PAGES.length) % PAGES.length)
 
   return (
-    <div className="device-console-frame flex items-center gap-2.5 rounded-2xl p-2">
+    <div
+      data-tour="console"
+      className="device-console-frame flex items-center gap-2.5 rounded-2xl p-2"
+    >
       <DPad onUp={() => step(-1)} onDown={() => step(1)} onLeft={() => step(-1)} onRight={() => step(1)} />
 
       <LcdScreen className="flex h-[130px] flex-1 flex-col px-3 py-1.5 sm:h-[150px]">
@@ -45,7 +48,7 @@ export function DataConsole({ pokemon, species, abilityDetails }: DataConsolePro
                 aria-selected={selected}
                 onClick={() => setPageIndex(i)}
                 className={`shrink-0 rounded px-1.5 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.12em] transition-colors ${
-                  selected ? 'bg-[#26340f]/70 text-[#cfe08a]' : 'text-[#26340f]/60 hover:text-[#26340f]'
+                  selected ? 'bg-[#16220a] text-[#dceca0]' : 'text-[#16220a]/85 hover:text-[#16220a]'
                 }`}
                 style={{ fontFamily: 'var(--font-lcd)' }}
               >

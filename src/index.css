@@ -346,7 +346,9 @@
   position: relative;
   overflow: hidden;
   font-family: var(--font-lcd);
-  color: #26340f;
+  /* Darkened for legibility — the pixel LCD face at small sizes needs the extra
+     contrast against the green screen (now ~9:1 vs the mid green). */
+  color: #16220a;
   background:
     linear-gradient(160deg, #cfe08a 0%, #b6d072 40%, #a6c65f 100%);
   box-shadow:
@@ -361,7 +363,7 @@
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 .dark .lcd {
-  color: #1f2e08;
+  color: #101c05;
   background:
     linear-gradient(160deg, #bcd67f 0%, #9fc25a 45%, #8bb249 100%);
 }
@@ -844,6 +846,31 @@
   .rarity-spark {
     animation: none;
     opacity: 0.55;
+  }
+}
+
+/* ============================================================
+   Pokédex guided tour — Ash slides up from the corner and the
+   speech bubble pops in beside him.
+   ============================================================ */
+.tour-ash {
+  animation: tour-ash-in 0.5s var(--ease-out-back) both;
+}
+.tour-bubble {
+  animation: tour-bubble-in 0.35s var(--ease-out-back) 0.12s both;
+}
+@keyframes tour-ash-in {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes tour-bubble-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-ash,
+  .tour-bubble {
+    animation: none;
   }
 }
 

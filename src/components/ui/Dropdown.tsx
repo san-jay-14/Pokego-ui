@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from 'react'
 import { createPortal } from 'react-dom'
@@ -107,6 +108,26 @@ export function Dropdown({
     target?.focus()
   }, [open])
 
+  // Roving keyboard navigation inside the listbox: arrows move focus between
+  // options, Home/End jump to the ends. (Escape/outside-click handled above.)
+  const onPanelKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    const nav = ['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft', 'Home', 'End']
+    if (!nav.includes(e.key)) return
+    const options = Array.from(
+      panelRef.current?.querySelectorAll<HTMLElement>('[role="option"]') ?? [],
+    ).filter((el) => !el.hasAttribute('disabled'))
+    if (options.length === 0) return
+    e.preventDefault()
+    const current = options.indexOf(document.activeElement as HTMLElement)
+    let next: number
+    if (e.key === 'Home') next = 0
+    else if (e.key === 'End') next = options.length - 1
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowRight')
+      next = current < 0 ? 0 : (current + 1) % options.length
+    else next = current <= 0 ? options.length - 1 : current - 1
+    options[next]?.focus()
+  }
+
   const style: CSSProperties = rect
     ? {
         position: 'fixed',
@@ -128,6 +149,7 @@ export function Dropdown({
             ref={panelRef}
             role="listbox"
             aria-label={label}
+            onKeyDown={onPanelKeyDown}
             style={style}
             className={`animate-dropdown rounded-[var(--radius-control)] border border-border bg-surface p-1.5 shadow-[var(--shadow-lg)] ${panelClassName}`}
           >

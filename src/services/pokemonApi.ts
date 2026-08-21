@@ -18,6 +18,8 @@ import type {
  */
 
 const BASE_URL = 'https://pokeapi.co/api/v2'
+/** PokéAPI's GraphQL endpoint — used only for the whole-dex base-stat index. */
+const GRAPHQL_URL = 'https://beta.pokeapi.co/graphql/v1beta'
 
 /** Discriminated error type so callers can branch on the failure mode. */
 export type ApiErrorKind = 'not-found' | 'http' | 'network' | 'malformed'
@@ -168,4 +170,73 @@ export async function fetchEncounters(
   const key = typeof nameOrId === 'string' ? slugify(nameOrId) : nameOrId
   const data = await request<LocationAreaEncounter[]>(`/pokemon/${key}/encounters`, signal)
   return Array.isArray(data) ? data : []
+}
+
+/** The three base stats the app can sort the whole dex by, keyed by dex id. */
+export type SortableStats = { hp: number; attack: number; speed: number }
+export type StatIndex = Map<number, SortableStats>
+
+interface GqlStatRow {
+  id: number
+  pokemon_v2_pokemonstats: { base_stat: number; pokemon_v2_stat: { name: string } }[]
+}
+
+/**
+ * Fetch the base HP / Attack / Speed of *every* Pokémon in a single GraphQL
+ * request (~250KB, cached for the session). This is what lets stat sorting rank
+ * the entire dex rather than only the cards already loaded — the REST list
+ * endpoint returns no stats, so without this a stat sort could only order the
+ * visible window. Callers treat a failure as non-fatal and fall back to sorting
+ * the loaded window.
+ */
+export async function fetchAllPokemonStats(signal?: AbortSignal): Promise<StatIndex> {
+  const query = `query StatIndex {
+    pokemon_v2_pokemon(limit: 100000) {
+      id
+      pokemon_v2_pokemonstats(where: { pokemon_v2_stat: { name: { _in: ["hp", "attack", "speed"] } } }) {
+        base_stat
+        pokemon_v2_stat { name }
+      }
+    }
+  }`
+
+  let response: Response
+  try {
+    response = await fetch(GRAPHQL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+      signal,
+    })
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') throw err
+    throw new ApiError('network', 'Could not reach the stat index.')
+  }
+  if (!response.ok) {
+    throw new ApiError('http', `Stat index request failed (${response.status}).`, response.status)
+  }
+
+  let json: { data?: { pokemon_v2_pokemon?: GqlStatRow[] }; errors?: unknown }
+  try {
+    json = await response.json()
+  } catch {
+    throw new ApiError('malformed', 'The stat index returned an unexpected response.')
+  }
+  const rows = json.data?.pokemon_v2_pokemon
+  if (!Array.isArray(rows)) {
+    throw new ApiError('malformed', 'The stat index returned an unexpected response.')
+  }
+
+  const index: StatIndex = new Map()
+  for (const row of rows) {
+    const stats: SortableStats = { hp: 0, attack: 0, speed: 0 }
+    for (const s of row.pokemon_v2_pokemonstats) {
+      const name = s.pokemon_v2_stat.name
+      if (name === 'hp' || name === 'attack' || name === 'speed') {
+        stats[name] = s.base_stat
+      }
+    }
+    index.set(row.id, stats)
+  }
+  return index
 }

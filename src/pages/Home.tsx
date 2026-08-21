@@ -6,6 +6,7 @@ import { HeroDock } from "@/components/layout/HeroDock";
 import {
   usePokemonIndex,
   usePokemonDetails,
+  usePokemonStatIndex,
   useTypeMembers,
 } from "@/hooks/usePokemonData";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -48,6 +49,7 @@ export function Home() {
 
   const index = usePokemonIndex();
   const typeMembers = useTypeMembers(type);
+  const statIndex = usePokemonStatIndex();
 
   // Tracks whether the hero has scrolled past the top of the viewport, so the
   // compact filter bar can take over search/filter access.
@@ -94,12 +96,23 @@ export function Home() {
       );
     }
 
-    // id / name sorts run at the index level (no details required)
+    // id / name sorts run at the index level (no details required).
+    // Stat sorts use the whole-dex stat index when it's available, so the
+    // ranking spans every Pokémon — not just the loaded window. If that index
+    // failed to load, we leave the entries in id order here and fall back to
+    // sorting only the resolved window below.
     const opt = getSortOption(sortKey);
     if (!opt.statKey) {
       entries = [...entries].sort((a, b) => {
         const cmp =
           sortKey === "name" ? a.name.localeCompare(b.name) : a.id - b.id;
+        return direction === "asc" ? cmp : -cmp;
+      });
+    } else if (statIndex.data) {
+      const stats = statIndex.data;
+      const sk = opt.statKey as "hp" | "attack" | "speed";
+      entries = [...entries].sort((a, b) => {
+        const cmp = (stats.get(a.id)?.[sk] ?? 0) - (stats.get(b.id)?.[sk] ?? 0);
         return direction === "asc" ? cmp : -cmp;
       });
     }
@@ -108,6 +121,7 @@ export function Home() {
   }, [
     index.data,
     typeMembers.data,
+    statIndex.data,
     favoritesOnly,
     favorites,
     type,
@@ -142,6 +156,17 @@ export function Home() {
 
   const hasMore = pagedEntries.length < filteredEntries.length;
   const pendingCount = Math.max(0, pagedEntries.length - pokemon.length);
+  // How wide the current stat sort actually ranks: the whole dex once the stat
+  // index has loaded, otherwise (only if it failed) just the resolved window.
+  const statSortScope: "global" | "loading" | "window" | null = !getSortOption(
+    sortKey,
+  ).statKey
+    ? null
+    : statIndex.data
+      ? "global"
+      : statIndex.isLoading
+        ? "loading"
+        : "window";
   const initialLoading =
     index.isLoading || (type !== "all" && typeMembers.isLoading);
   const searching = search.trim() !== debouncedSearch;
@@ -165,6 +190,7 @@ export function Home() {
         onToggleFavorites={toggleFavoritesOnly}
         resultCount={filteredEntries.length}
         showCount={!initialLoading}
+        statSortScope={statSortScope}
         sentinelRef={heroEndRef}
       />
 
@@ -244,6 +270,7 @@ interface HeroProps {
   onToggleFavorites: () => void;
   resultCount: number;
   showCount: boolean;
+  statSortScope: "global" | "loading" | "window" | null;
   sentinelRef: RefObject<HTMLDivElement | null>;
 }
 
@@ -261,6 +288,7 @@ function Hero({
   onToggleFavorites,
   resultCount,
   showCount,
+  statSortScope,
   sentinelRef,
 }: HeroProps) {
   return (
@@ -322,9 +350,14 @@ function Hero({
                 </p>
               )}
             </div>
-            {getSortOption(sortKey).statKey && (
+            {statSortScope === "loading" && (
               <p className="mx-auto mt-3 w-fit max-w-full rounded-full border border-border bg-surface/90 px-3 py-1.5 text-center text-xs font-medium text-ink-soft shadow-[var(--shadow-sm)] backdrop-blur-sm sm:mx-0 sm:text-left">
-                Stat sorts order the Pokémon loaded so far — use “Load more” to rank a wider set.
+                Ranking across the full dex…
+              </p>
+            )}
+            {statSortScope === "window" && (
+              <p className="mx-auto mt-3 w-fit max-w-full rounded-full border border-border bg-surface/90 px-3 py-1.5 text-center text-xs font-medium text-ink-soft shadow-[var(--shadow-sm)] backdrop-blur-sm sm:mx-0 sm:text-left">
+                Ranking the Pokémon loaded so far — use “Load more” to widen the set.
               </p>
             )}
           </div>

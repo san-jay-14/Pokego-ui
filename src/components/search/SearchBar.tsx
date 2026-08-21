@@ -48,7 +48,7 @@ export function SearchBar({
         }}
         placeholder={placeholder}
         aria-label="Search Pokémon by name or dex number"
-        className={`h-13 w-full py-3.5 pl-12 pr-11 text-base font-medium text-ink outline-none transition-[border-color,box-shadow] placeholder:text-faint [&::-webkit-search-cancel-button]:hidden ${
+        className={`h-13 w-full py-3.5 pl-12 pr-11 text-base font-medium text-ink outline-none transition-[border-color,box-shadow] placeholder:text-muted [&::-webkit-search-cancel-button]:hidden ${
           bare
             ? 'border-0 bg-transparent'
             : 'rounded-[var(--radius-control)] border border-border bg-surface shadow-[var(--shadow-sm)] focus:border-primary/60 focus:shadow-[0_0_0_4px_var(--primary-soft)]'

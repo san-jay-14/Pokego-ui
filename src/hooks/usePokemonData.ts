@@ -2,6 +2,7 @@ import { useQueries, useQuery } from '@tanstack/react-query'
 import {
   fetchAbility,
   fetchAllPokemonIndex,
+  fetchAllPokemonStats,
   fetchEncounters,
   fetchEvolutionChain,
   fetchMove,
@@ -30,6 +31,7 @@ export const pokemonKeys = {
   move: (name: string) => ['move', name] as const,
   ability: (name: string) => ['ability', name] as const,
   encounters: (nameOrId: string | number) => ['pokemon', 'encounters', String(nameOrId)] as const,
+  statIndex: ['pokemon', 'stat-index'] as const,
 }
 
 /** The full lightweight dex index (name + id), fetched once per session. */
@@ -38,6 +40,20 @@ export function usePokemonIndex() {
     queryKey: pokemonKeys.index,
     queryFn: ({ signal }) => fetchAllPokemonIndex(signal),
     staleTime: Infinity,
+  })
+}
+
+/**
+ * Whole-dex base-stat index (HP / Attack / Speed by id), fetched once via
+ * GraphQL so stat sorts can rank every Pokémon — not just the loaded window.
+ * A failure is non-fatal: callers fall back to sorting the visible window.
+ */
+export function usePokemonStatIndex() {
+  return useQuery({
+    queryKey: pokemonKeys.statIndex,
+    queryFn: ({ signal }) => fetchAllPokemonStats(signal),
+    staleTime: Infinity,
+    retry: 1,
   })
 }
 

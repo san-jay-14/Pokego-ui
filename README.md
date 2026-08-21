@@ -37,10 +37,11 @@
 
 - ⭐ **Favourites** — persisted to `localStorage`, with a favourites-only view.
 - 🌙 **Dark mode** — independently hand-designed light and dark themes (not an inversion), persisted.
-- ↕️ **Sort** — by dex number, name, attack, speed or HP, with a direction toggle.
+- ↕️ **Sort** — by dex number, name, attack, speed or HP, with a direction toggle. Stat sorts rank the **whole dex** (via a one-shot GraphQL stat index), not just the loaded page.
 - ⚖️ **Compare** — send two Pokémon into a head-to-head "Battlefield" comparing stats, height/weight, type matchups and abilities.
+- 🧭 **Guided tour** — first-time visitors are walked through the Pokédex device by Ash: a spotlighted, step-by-step onboarding (persisted to `localStorage`) that surfaces the D-pad data console, evolution rail and move list. Re-runnable any time from the ? control.
 - 🔗 **URL-based navigation** — every detail view is directly shareable and deep-linkable.
-- ⌨️ **Keyboard accessible** — the modal traps focus, restores it on close, and closes on Escape.
+- ⌨️ **Keyboard accessible** — the modal and the tour trap focus, restore it on close, and close on Escape; the type filter is a roving-arrow-key listbox.
 
 ### Loading, Error & Empty States
 
@@ -51,6 +52,25 @@ Nothing ever shows a blank screen or a raw error. Every fetch resolves into one 
 | **Loading** | Shimmering skeleton card grid on first load and on filter/type changes · Pokéball spinner on **Load More**, on the opening Pokédex, and in compare slots · per-panel “Loading…” on the device screens while sub-resources resolve                                                                                 |
 | **Error**   | `not-found` → “Pokémon not found” (bad search / dead link) · `network` → “You’re offline” · `malformed` → “Something looks off” · unknown → “Something went wrong”. Every recoverable error shows a **Try again** button.                                                                                         |
 | **Empty**   | No search/filter matches → “No Pokémon found” + **Clear filters** · Favourites view with none saved → “No favourites yet” + **Browse all** · Unknown route → “Page not found” + **Back to Pokédex** · No wild encounters → “Not found in the wild” · A Pokémon with no listed moves → a graceful “No known moves” |
+
+The detail view is a skeuomorphic Pokédex whose controls (the D-pad data console, the localized-name
+arrows, the sprite dials) aren’t self-evident — so **Ash walks first-time visitors through it**. The tour
+([`PokedexTour.tsx`](src/components/pokemon/detail/PokedexTour.tsx)) opens automatically the first time the
+Pokédex is opened and can be replayed any time from the **?** control in the device’s status bar.
+
+- **Spotlight onboarding** — a dimming overlay with a cut-out ring highlights each part in turn (name bar →
+  sprite viewer → dex entry → types & forms → **data console** → evolution → moves → nav), while Ash
+  explains it from a speech bubble with **Back / Next**, a step counter and progress dots.
+- **Solves the discoverability gap** — the standout step is the data console: it makes clear that the
+  **D-pad (or the on-screen tabs)** pages through Stats, **Profile (height & weight)**, Breeding and
+  Abilities — data that would otherwise stay hidden behind an undiscovered control.
+- **Never covers what it’s pointing at** — a small collision solver anchors the Ash + bubble cluster to
+  whichever screen corner keeps the highlighted element clear, on both desktop and mobile.
+- **Seen-once** — a `localStorage` flag (`pokedex-tour-seen`) means it auto-runs only on the first visit;
+  everyone can re-trigger it on demand.
+- **Accessible** — it owns the keyboard while open (← → / Enter page, Tab cycles the bubble, Escape ends the
+  tour without closing the Pokédex), moves focus to the primary action each step, and honours
+  `prefers-reduced-motion`.
 
 ## Tech Stack
 
@@ -82,6 +102,11 @@ consumed through the hooks in [`src/hooks`](src/hooks). Every failure is normali
 | `GET /ability/{name\|id}`            | Ability effect text                                                                                                                   |
 | `GET /pokemon/{name\|id}/encounters` | Wild encounter locations and their level ranges                                                                                       |
 
+Sorting by a stat additionally uses PokéAPI's **GraphQL** endpoint
+(`POST https://beta.pokeapi.co/graphql/v1beta`) once per session to pull every Pokémon's base
+HP/Attack/Speed in a single request — cached so stat sorts rank the whole dex, with a graceful fallback to
+the loaded window if the request fails.
+
 ## Installation
 
 Requires Node 18+ (developed on Node 22).
@@ -108,7 +133,7 @@ src/
 ├── components/
 │   ├── layout/       HeroDock, PageContainer, ThemeToggle, ScrollToTop
 │   ├── pokemon/      PokemonCard, PokemonGrid, EnergyPip
-│   │   └── detail/   Pokedex, PokedexModal, PokedexEntry
+│   │   └── detail/   Pokedex, PokedexModal, PokedexEntry, PokedexTour
 │   │       └── device/   DataConsole, DPad, StatsFields, DataScreens,
 │   │                     SpriteViewer, MoveBrowser, EvolutionRail,
 │   │                     TypeButtons, LcdScreen, DeviceNav, DeviceCry, FormSelector
@@ -136,12 +161,12 @@ cached independently and **shared** across the grid, detail view and compare —
 
 ## Engineering Decisions & Tradeoffs
 
-| Decision                                                                                                                                   | Why                                                                                              | Tradeoff                                                                                                                             |
-| ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| **Two-tier data model** — cache a lightweight `name + id` index once, then fetch full details lazily per visible card                      | Instant search / filter / sort across all ~1,300 Pokémon without downloading everything up front | Id and name sort globally, but **stat sorts only rank the Pokémon already loaded** — the API returns no stats for un-fetched entries |
-| **Detail as a modal at a real URL** (`/pokemon/:name`) over a persistent grid                                                              | Deep-linkable and shareable, and closing keeps the grid's scroll position and filters intact     | The Home grid stays mounted beneath the modal                                                                                        |
-| **Lazy card enrichment** via `IntersectionObserver` — species, evolution, moves and type-matchups fetch only once a card scrolls into view | Keeps first paint fast: a page of cards doesn't fire 100+ requests at once                       | The trading-card flourishes fill in a beat after a card enters view                                                                  |
-| **Hand-tuned dual theme** via semantic CSS tokens rather than a colour inversion                                                           | Light and dark each look intentional and on-brand                                                | Every design token is defined twice                                                                                                  |
+| Decision                                                                                                                                   | Why                                                                                              | Tradeoff                                                                                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Two-tier data model** — cache a lightweight `name + id` index once, then fetch full details lazily per visible card                      | Instant search / filter / sort across all ~1,300 Pokémon without downloading everything up front | Id / name sort from the index; **stat sorts rank the whole dex** via a one-shot GraphQL stat index (~250 KB, cached), with a graceful fallback to the loaded window if that request ever fails |
+| **Detail as a modal at a real URL** (`/pokemon/:name`) over a persistent grid                                                              | Deep-linkable and shareable, and closing keeps the grid's scroll position and filters intact     | The Home grid stays mounted beneath the modal                                                                                                                                                  |
+| **Lazy card enrichment** via `IntersectionObserver` — species, evolution, moves and type-matchups fetch only once a card scrolls into view | Keeps first paint fast: a page of cards doesn't fire 100+ requests at once                       | The trading-card flourishes fill in a beat after a card enters view                                                                                                                            |
+| **Hand-tuned dual theme** via semantic CSS tokens rather than a colour inversion                                                           | Light and dark each look intentional and on-brand                                                | Every design token is defined twice                                                                                                                                                            |
 
 ## Challenges Faced
 
@@ -154,8 +179,10 @@ cached independently and **shared** across the grid, detail view and compare —
   stats. Solved with the cached index + lazy per-Pokémon detail resolution, deduped and cached by React Query.
 - **Searching the whole dex without hammering the API.** Rather than a request per keystroke, the cached
   index enables instant client-side substring search, fetching details only for the matches actually shown.
-- **Sorting by stats the list doesn't contain.** Id/name sorts run on the index; stat sorts apply to the
-  resolved window that Load More grows — a predictable model for a Load-More UX.
+- **Sorting by stats the list doesn't contain.** The REST list endpoint returns no stats, so a naïve stat
+  sort could only rank the loaded window. Solved by pulling every Pokémon's base HP/Attack/Speed in a single
+  GraphQL request (cached once), so stat sorts rank the entire dex — falling back to the loaded window only if
+  that request fails.
 - **A theme system that isn't just inverted colours.** Semantic CSS variables define light and dark
   independently and flow into Tailwind v4's `@theme`, so both themes are tuned by hand.
 
@@ -164,8 +191,9 @@ cached independently and **shared** across the grid, detail view and compare —
 - **Expand the universe beyond Pokémon** — the app currently fetches only Pokémon data; PokéAPI also exposes
   **Items, Berries, Machines (TM/HMs), Locations, Natures and more**, which could become their own explorable,
   cross-linked sections (e.g. an item that a Pokémon can hold, or a berry it likes).
-- **Global stat sorting** across the whole dex (today stat sorts rank only the loaded window) — practical via
-  PokéAPI's GraphQL endpoint, which can return `id + name + base stats` for every Pokémon in a single request.
+- **Automated test coverage** — unit tests for the data pipeline (type-effectiveness computation, the
+  sort/filter logic, and the `ApiError` normalization) plus a couple of component/interaction tests for the
+  modal and the guided tour, wired into CI.
 - **Shareable compare URLs** (`/compare/pikachu/charizard`).
 - **Virtualized grid** for very large filtered sets.
 - **Offline support** via a service worker.
