@@ -46,23 +46,23 @@
 
 Nothing ever shows a blank screen or a raw error. Every fetch resolves into one of three deliberate states:
 
-| Kind | Where it appears |
-| --- | --- |
-| **Loading** | Shimmering skeleton card grid on first load and on filter/type changes · Pokéball spinner on **Load More**, on the opening Pokédex, and in compare slots · per-panel “Loading…” on the device screens while sub-resources resolve |
-| **Error** | `not-found` → “Pokémon not found” (bad search / dead link) · `network` → “You’re offline” · `malformed` → “Something looks off” · unknown → “Something went wrong”. Every recoverable error shows a **Try again** button. |
-| **Empty** | No search/filter matches → “No Pokémon found” + **Clear filters** · Favourites view with none saved → “No favourites yet” + **Browse all** · Unknown route → “Page not found” + **Back to Pokédex** · No wild encounters → “Not found in the wild” · A Pokémon with no listed moves → a graceful “No known moves” |
+| Kind        | Where it appears                                                                                                                                                                                                                                                                                                  |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Loading** | Shimmering skeleton card grid on first load and on filter/type changes · Pokéball spinner on **Load More**, on the opening Pokédex, and in compare slots · per-panel “Loading…” on the device screens while sub-resources resolve                                                                                 |
+| **Error**   | `not-found` → “Pokémon not found” (bad search / dead link) · `network` → “You’re offline” · `malformed` → “Something looks off” · unknown → “Something went wrong”. Every recoverable error shows a **Try again** button.                                                                                         |
+| **Empty**   | No search/filter matches → “No Pokémon found” + **Clear filters** · Favourites view with none saved → “No favourites yet” + **Browse all** · Unknown route → “Page not found” + **Back to Pokédex** · No wild encounters → “Not found in the wild” · A Pokémon with no listed moves → a graceful “No known moves” |
 
 ## Tech Stack
 
-| Concern        | Choice                                            |
-| -------------- | ------------------------------------------------- |
-| Framework      | React 19 + TypeScript                             |
-| Build tool     | Vite 6                                            |
-| Styling        | Tailwind CSS v4 (CSS-first design tokens)         |
-| Data fetching  | TanStack Query v5 (caching, dedupe, parallelism)  |
-| Client state   | Zustand (persisted: theme, favourites, compare)   |
-| Routing        | React Router v7                                   |
-| Icons          | Lucide React                                      |
+| Concern       | Choice                                           |
+| ------------- | ------------------------------------------------ |
+| Framework     | React 19 + TypeScript                            |
+| Build tool    | Vite 6                                           |
+| Styling       | Tailwind CSS v4 (CSS-first design tokens)        |
+| Data fetching | TanStack Query v5 (caching, dedupe, parallelism) |
+| Client state  | Zustand (persisted: theme, favourites, compare)  |
+| Routing       | React Router v7                                  |
+| Icons         | Lucide React                                     |
 
 ## API Used
 
@@ -71,16 +71,16 @@ access lives in one service layer, [`src/services/pokemonApi.ts`](src/services/p
 consumed through the hooks in [`src/hooks`](src/hooks). Every failure is normalized into a typed
 `ApiError` (`not-found` / `network` / `http` / `malformed`) so the UI can respond precisely.
 
-| Endpoint | Used for |
-| --- | --- |
-| `GET /pokemon?limit&offset` | The full lightweight dex index (name + id), fetched **once** and cached to power whole-dex search, filter and sort |
-| `GET /pokemon/{name\|id}` | Full details — artwork, types, base stats, height, weight, abilities, moves and cry — for the cards, the detail view and compare |
-| `GET /type/{type}` | Two uses: **(1)** the members of a type for the type filter, and **(2)** damage relations to compute weakness / resistance / immunity |
-| `GET /pokemon-species/{name\|id}` | Pokédex flavor text, genus, rarity (legendary / mythical / baby), the evolution-chain link, breeding data and localized names |
-| `GET /evolution-chain/{id}` | The full evolution line and each stage's trigger |
-| `GET /move/{name\|id}` | Real move power, accuracy, PP, type and damage class for the move browser and card attacks |
-| `GET /ability/{name\|id}` | Ability effect text |
-| `GET /pokemon/{name\|id}/encounters` | Wild encounter locations and their level ranges |
+| Endpoint                             | Used for                                                                                                                              |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /pokemon?limit&offset`          | The full lightweight dex index (name + id), fetched **once** and cached to power whole-dex search, filter and sort                    |
+| `GET /pokemon/{name\|id}`            | Full details — artwork, types, base stats, height, weight, abilities, moves and cry — for the cards, the detail view and compare      |
+| `GET /type/{type}`                   | Two uses: **(1)** the members of a type for the type filter, and **(2)** damage relations to compute weakness / resistance / immunity |
+| `GET /pokemon-species/{name\|id}`    | Pokédex flavor text, genus, rarity (legendary / mythical / baby), the evolution-chain link, breeding data and localized names         |
+| `GET /evolution-chain/{id}`          | The full evolution line and each stage's trigger                                                                                      |
+| `GET /move/{name\|id}`               | Real move power, accuracy, PP, type and damage class for the move browser and card attacks                                            |
+| `GET /ability/{name\|id}`            | Ability effect text                                                                                                                   |
+| `GET /pokemon/{name\|id}/encounters` | Wild encounter locations and their level ranges                                                                                       |
 
 ## Installation
 
@@ -136,12 +136,12 @@ cached independently and **shared** across the grid, detail view and compare —
 
 ## Engineering Decisions & Tradeoffs
 
-| Decision | Why | Tradeoff |
-| --- | --- | --- |
-| **Two-tier data model** — cache a lightweight `name + id` index once, then fetch full details lazily per visible card | Instant search / filter / sort across all ~1,300 Pokémon without downloading everything up front | Id and name sort globally, but **stat sorts only rank the Pokémon already loaded** — the API returns no stats for un-fetched entries |
-| **Detail as a modal at a real URL** (`/pokemon/:name`) over a persistent grid | Deep-linkable and shareable, and closing keeps the grid's scroll position and filters intact | The Home grid stays mounted beneath the modal |
-| **Lazy card enrichment** via `IntersectionObserver` — species, evolution, moves and type-matchups fetch only once a card scrolls into view | Keeps first paint fast: a page of cards doesn't fire 100+ requests at once | The trading-card flourishes fill in a beat after a card enters view |
-| **Hand-tuned dual theme** via semantic CSS tokens rather than a colour inversion | Light and dark each look intentional and on-brand | Every design token is defined twice |
+| Decision                                                                                                                                   | Why                                                                                              | Tradeoff                                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **Two-tier data model** — cache a lightweight `name + id` index once, then fetch full details lazily per visible card                      | Instant search / filter / sort across all ~1,300 Pokémon without downloading everything up front | Id and name sort globally, but **stat sorts only rank the Pokémon already loaded** — the API returns no stats for un-fetched entries |
+| **Detail as a modal at a real URL** (`/pokemon/:name`) over a persistent grid                                                              | Deep-linkable and shareable, and closing keeps the grid's scroll position and filters intact     | The Home grid stays mounted beneath the modal                                                                                        |
+| **Lazy card enrichment** via `IntersectionObserver` — species, evolution, moves and type-matchups fetch only once a card scrolls into view | Keeps first paint fast: a page of cards doesn't fire 100+ requests at once                       | The trading-card flourishes fill in a beat after a card enters view                                                                  |
+| **Hand-tuned dual theme** via semantic CSS tokens rather than a colour inversion                                                           | Light and dark each look intentional and on-brand                                                | Every design token is defined twice                                                                                                  |
 
 ## Challenges Faced
 
@@ -174,15 +174,13 @@ cached independently and **shared** across the grid, detail view and compare —
 
 Best experienced live at **[pokego-ui.vercel.app](https://pokego-ui.vercel.app/)**.
 
-| Home — Light | Home — Dark |
-| :---: | :---: |
+|                        Home — Light                        |                       Home — Dark                        |
+| :--------------------------------------------------------: | :------------------------------------------------------: |
 | ![Home grid, light theme](docs/screenshots/home-light.png) | ![Home grid, dark theme](docs/screenshots/home-dark.png) |
 
-| Pokédex Detail | Battlefield Compare |
-| :---: | :---: |
+|                    Pokédex Detail                     |                    Battlefield Compare                    |
+| :---------------------------------------------------: | :-------------------------------------------------------: |
 | ![Pokédex detail device](docs/screenshots/detail.png) | ![Battlefield head-to-head](docs/screenshots/compare.png) |
-
-> Add your captures to [`docs/screenshots/`](docs/screenshots/) using the filenames above and they'll appear here.
 
 ---
 
