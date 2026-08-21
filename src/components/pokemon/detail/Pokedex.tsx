@@ -208,8 +208,9 @@ export function Pokedex(props: PokedexProps) {
           </div>
         </div>
 
-        {/* Spine — offset down to start where the left leaf's header ends */}
-        <div className="pokedex-hinge hidden lg:flex lg:mt-[56px]" aria-hidden="true">
+        {/* Spine — horizontal between the stacked leaves on mobile, a vertical
+            book-spine offset down beside the leaves on desktop. */}
+        <div className="pokedex-hinge lg:mt-[56px]" aria-hidden="true">
           <span className="hinge-gap" />
           <span className="hinge-barrel" />
           <span className="hinge-gap" />
@@ -272,7 +273,7 @@ function LensEye({ onClose }: { onClose?: () => void }) {
       />
       <span className="absolute bottom-0 right-0 h-4 w-4 rounded-full bg-black/25 blur-[2px]" />
       {onClose && (
-        <span className="pointer-events-none absolute inset-0 grid place-items-center opacity-0 transition-opacity duration-150 group-hover/lens:opacity-100 group-focus-visible/lens:opacity-100">
+        <span className="pointer-events-none absolute inset-0 grid place-items-center">
           <X className="h-4 w-4 text-white drop-shadow-[0_1px_2px_rgba(0,20,45,0.9)]" strokeWidth={3.2} />
         </span>
       )}
@@ -303,8 +304,7 @@ function LensEye({ onClose }: { onClose?: () => void }) {
       onClick={onClose}
       aria-label="Close Pokédex"
       title="Close Pokédex"
-      className="group/lens relative grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full border-0 p-[3px] outline-none transition-transform duration-150 hover:scale-105 active:scale-90 focus-visible:ring-2 focus-visible:ring-white/85 focus-visible:ring-offset-1"
-      style={ringStyle}
+      className="pokedex-lens-ring group/lens relative grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full border-0 p-[3px] outline-none hover:scale-105 active:scale-90 focus-visible:ring-2 focus-visible:ring-white/85 focus-visible:ring-offset-1"
     >
       {inner}
     </button>

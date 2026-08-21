@@ -392,13 +392,14 @@
   .lcd-cursor { animation: none; }
 }
 
-/* The book "spine" hinge between the two Pokédex panels (desktop only) — a
-   stack of alternating dark "gap" links and bright "hinge" barrels, echoing
-   the classic device's segmented spine. */
+/* The segmented "spine" hinge between the two Pokédex panels — alternating dark
+   "gap" links and bright "hinge" barrels. On mobile the leaves stack, so it lies
+   HORIZONTAL between them; on desktop it stands VERTICAL beside them. */
 .pokedex-hinge {
   display: flex;
-  flex-direction: column;
-  width: 22px;
+  flex-direction: row;
+  height: 20px;
+  width: 100%;
   padding: 2px;
   gap: 2px;
   border-radius: 6px;
@@ -409,15 +410,33 @@
   border-radius: 4px;
   border: 2px solid;
 }
+/* Horizontal tube: light runs top→bottom (highlight on top, shadow beneath). */
 .pokedex-hinge > .hinge-gap {
   flex: 1;
-  background: linear-gradient(90deg, #460f0f 0, #891313 30%, #b31818 45%, #fd5555 65%, #b31818 95%);
-  border-color: #891313 #b31818 #891313 #5f1010;
+  background: linear-gradient(180deg, #460f0f 0, #891313 30%, #b31818 45%, #fd5555 65%, #b31818 95%);
+  border-color: #b31818 #891313 #5f1010 #891313;
 }
 .pokedex-hinge > .hinge-barrel {
   flex: 3;
-  background: linear-gradient(90deg, #891313 0, #b31818 30%, #e61515 45%, #fd5555 65%, #e61515 95%);
-  border-color: #fd5555 #fd5555 #5f1010 #5f1010;
+  background: linear-gradient(180deg, #891313 0, #b31818 30%, #e61515 45%, #fd5555 65%, #e61515 95%);
+  border-color: #fd5555 #891313 #5f1010 #891313;
+}
+
+/* Desktop: rotate the spine vertical and let the light run left→right. */
+@media (min-width: 1024px) {
+  .pokedex-hinge {
+    flex-direction: column;
+    width: 22px;
+    height: auto;
+  }
+  .pokedex-hinge > .hinge-gap {
+    background: linear-gradient(90deg, #460f0f 0, #891313 30%, #b31818 45%, #fd5555 65%, #b31818 95%);
+    border-color: #891313 #b31818 #891313 #5f1010;
+  }
+  .pokedex-hinge > .hinge-barrel {
+    background: linear-gradient(90deg, #891313 0, #b31818 30%, #e61515 45%, #fd5555 65%, #e61515 95%);
+    border-color: #fd5555 #fd5555 #5f1010 #5f1010;
+  }
 }
 
 /* Recessed dark screen frame that green LCDs sit inside. */
@@ -506,6 +525,25 @@
   background-color: #e6a423;
   background-image: repeating-linear-gradient(180deg, #a86e0e 0 2px, transparent 2px 5px);
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 6px rgba(230, 164, 35, 0.6);
+}
+
+/* Chrome ring around the Pokédex lens (which doubles as the close button).
+   Silver at rest; warms to a red-tinted chrome with a soft glow on hover to
+   flag the close action. */
+.pokedex-lens-ring {
+  background: linear-gradient(160deg, #f4f6f9 0%, #c7ced9 45%, #8b93a1 100%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.85),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.28),
+    0 2px 5px rgba(0, 0, 0, 0.45);
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+.pokedex-lens-ring:hover {
+  background: linear-gradient(160deg, #ffe1de 0%, #f28b82 45%, #c0392f 100%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.9),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.28),
+    0 2px 9px rgba(224, 43, 43, 0.55);
 }
 
 /* Chrome D-pad / control-cluster button — radial blue "glass" like the classic
@@ -636,8 +674,9 @@
   width: 100%;
   max-width: 1000px;
 }
-/* The wrapper only rises/drops + fades — it never rotates, so the left leaf
-   stays planted. The hinge swing lives on .pokedex-flap (desktop only). */
+/* The wrapper only rises/drops + fades — it never rotates, so the top/left leaf
+   stays planted. The hinge swing lives on .pokedex-flap (down on mobile, around
+   the spine on desktop). */
 .pokedex-swing {
   position: relative;
   will-change: transform, opacity;
@@ -662,6 +701,29 @@
 @keyframes pokedex-drop-out {
   from { opacity: 1; transform: translateY(0) scale(1); }
   to { opacity: 0; transform: translateY(64px) scale(0.98); }
+}
+
+/* Mobile: the leaves stack, so the lower leaf is a lid hinged at its TOP edge
+   (the horizontal spine). It swings DOWN into place on open and folds UP on
+   close. Perspective on the grid gives the fold real depth. */
+.pokedex-leaves {
+  perspective: 1400px;
+}
+.pokedex-flap {
+  transform-origin: top center;
+  backface-visibility: hidden;
+  animation: pokedex-lid-down 0.55s var(--ease-out-back) 0.06s both;
+}
+.pokedex-swing[data-closing] .pokedex-flap {
+  animation: pokedex-lid-up 0.32s var(--ease-smooth) both;
+}
+@keyframes pokedex-lid-down {
+  from { transform: rotateX(-100deg); }
+  to { transform: rotateX(0deg); }
+}
+@keyframes pokedex-lid-up {
+  from { transform: rotateX(0deg); }
+  to { transform: rotateX(-100deg); }
 }
 
 /* Desktop: the right leaf is a hinged lid. Perspective sits on the grid so the

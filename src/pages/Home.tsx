@@ -323,7 +323,7 @@ function Hero({
               )}
             </div>
             {getSortOption(sortKey).statKey && (
-              <p className="mt-2 text-center text-xs text-muted sm:text-left">
+              <p className="mx-auto mt-3 w-fit max-w-full rounded-full border border-border bg-surface/90 px-3 py-1.5 text-center text-xs font-medium text-ink-soft shadow-[var(--shadow-sm)] backdrop-blur-sm sm:mx-0 sm:text-left">
                 Stat sorts order the Pokémon loaded so far — use “Load more” to rank a wider set.
               </p>
             )}
