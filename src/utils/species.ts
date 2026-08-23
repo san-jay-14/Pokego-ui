@@ -6,6 +6,7 @@ import type {
   Pokemon,
   PokemonSpecies,
 } from '@/types/pokemon'
+import type { ChainSpeciesLink, EnrichmentRow } from '@/services/pokemonApi'
 import { formatName } from '@/utils/pokemon'
 
 /** English genus, e.g. "Seed Pokémon". Falls back gracefully. */
@@ -159,4 +160,120 @@ export function formatEvolutionTrigger(details: EvolutionDetail[]): string {
   if (d.location) return `At ${formatName(d.location.name)}`
   if (d.trigger?.name === 'trade') return 'Trade'
   return d.trigger ? formatName(d.trigger.name) : ''
+}
+
+/* ---------------- Batched card enrichment (GraphQL path) ---------------- */
+
+/** One attack as shown on a trading card. */
+export interface CardAttack {
+  name: string
+  power: number | null
+  /** The move's own type slug — drives the first energy pip. */
+  type: string
+}
+
+/**
+ * Everything a `PokemonCard` needs beyond its REST detail payload, resolved in
+ * one batched request. Assembled by `useWindowEnrichment`.
+ */
+export interface CardEnrichment {
+  genus: string | null
+  classification: Classification | null
+  preEvo: { name: string; id: number } | null
+  attacks: CardAttack[]
+}
+
+/**
+ * Evolution depth from a flat species list linked by `evolves_from_species_id`.
+ *
+ * The REST path walks the nested chain tree (`getEvolutionStage`); GraphQL
+ * returns the chain's species as an unordered flat list instead, so depth is a
+ * walk *up* the parent pointers — O(depth) rather than a full DFS. The `seen`
+ * set guards against a malformed cycle rather than any real data shape.
+ */
+export function stageFromChainLinks(
+  chain: ChainSpeciesLink[],
+  speciesId: number,
+): number | null {
+  const byId = new Map(chain.map((s) => [s.id, s]))
+  let current = byId.get(speciesId)
+  if (!current) return null
+
+  let stage = 0
+  const seen = new Set<number>([current.id])
+  while (current.evolves_from_species_id != null) {
+    const parent = byId.get(current.evolves_from_species_id)
+    if (!parent || seen.has(parent.id)) break
+    seen.add(parent.id)
+    current = parent
+    stage++
+  }
+  return stage
+}
+
+/**
+ * Rarity/stage classification from the flat GraphQL shape. Mirrors
+ * `getClassification` exactly — rarity wins, otherwise evolution stage.
+ */
+export function classifyFromChainLinks(
+  species: {
+    id: number
+    is_legendary: boolean
+    is_mythical: boolean
+    is_baby: boolean
+    evolves_from_species_id: number | null
+  },
+  chain: ChainSpeciesLink[],
+): Classification {
+  if (species.is_legendary) return { label: 'Legendary', tone: 'legendary' }
+  if (species.is_mythical) return { label: 'Mythical', tone: 'mythical' }
+  if (species.is_baby) return { label: 'Baby', tone: 'baby' }
+
+  const stage = stageFromChainLinks(chain, species.id)
+  if (stage === 0) return { label: 'Basic', tone: 'neutral' }
+  if (stage === 1) return { label: 'Stage 1', tone: 'neutral' }
+  if (stage != null && stage >= 2) return { label: 'Stage 2', tone: 'neutral' }
+  // Chain missing entirely — fall back to the species' own parent link.
+  return {
+    label: species.evolves_from_species_id != null ? 'Evolved' : 'Basic',
+    tone: 'neutral',
+  }
+}
+
+/**
+ * Reduce one raw GraphQL enrichment row to the card's view-model.
+ * Attack selection reproduces `getMovesByMethod('level-up')` ordering: earliest
+ * level first, ties broken alphabetically, then the first two.
+ */
+export function toCardEnrichment(row: EnrichmentRow): CardEnrichment {
+  const species = row.pokemon_v2_pokemonspecy
+  const chain = species?.pokemon_v2_evolutionchain?.pokemon_v2_pokemonspecies ?? []
+
+  const source = row.levelMoves.length > 0 ? row.levelMoves : row.anyMoves
+  const seen = new Set<string>()
+  const ranked: { level: number; attack: CardAttack }[] = []
+  for (const entry of source) {
+    const move = entry.pokemon_v2_move
+    if (!move || seen.has(move.name)) continue
+    seen.add(move.name)
+    ranked.push({
+      level: entry.level ?? 0,
+      attack: {
+        name: move.name,
+        power: move.power,
+        type: move.pokemon_v2_type?.name ?? 'normal',
+      },
+    })
+  }
+  ranked.sort((a, b) => a.level - b.level || a.attack.name.localeCompare(b.attack.name))
+
+  const parentId = species?.evolves_from_species_id ?? null
+  const parent = parentId != null ? chain.find((s) => s.id === parentId) : undefined
+
+  return {
+    genus: species?.pokemon_v2_pokemonspeciesnames[0]?.genus ?? null,
+    classification: species ? classifyFromChainLinks(species, chain) : null,
+    preEvo: parent ? { name: parent.name, id: parent.id } : null,
+    attacks: ranked.slice(0, 2).map((r) => r.attack),
+  }
 }
