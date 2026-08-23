@@ -8,6 +8,7 @@ import {
   usePokemonDetails,
   usePokemonStatIndex,
   useTypeMembers,
+  useWindowEnrichment,
 } from "@/hooks/usePokemonData";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useAppStore } from "@/store/useAppStore";
@@ -138,6 +139,12 @@ export function Home() {
   const { pokemon, isLoading: detailsLoading } =
     usePokemonDetails(pagedEntries);
 
+  // One batched GraphQL request per page supplies every card's genus, rarity /
+  // stage, pre-evolution and attacks — replacing five REST requests per card.
+  // Fired alongside the detail queries, so it usually lands first.
+  const pagedIds = useMemo(() => pagedEntries.map((e) => e.id), [pagedEntries]);
+  const enrichment = useWindowEnrichment(pagedIds);
+
   /** Stat sorts operate on the resolved window; id/name keep index order. */
   const displayPokemon = useMemo(() => {
     const opt = getSortOption(sortKey);
@@ -224,7 +231,11 @@ export function Home() {
           />
         ) : (
           <>
-            <PokemonGrid pokemon={displayPokemon} pendingCount={pendingCount} />
+            <PokemonGrid
+              pokemon={displayPokemon}
+              pendingCount={pendingCount}
+              enrichment={enrichment.byId}
+            />
 
             {hasMore && (
               <div className="mt-10 flex justify-center">
