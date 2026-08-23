@@ -7,6 +7,9 @@ import type {
   PokemonSpecies,
 } from '@/types/pokemon'
 import type { ChainSpeciesLink, EnrichmentRow } from '@/services/pokemonApi'
+
+/** The move payload carried on one enrichment row. */
+type GqlMove = EnrichmentRow['levelMoves'][number]['pokemon_v2_move']
 import { formatName } from '@/utils/pokemon'
 
 /** English genus, e.g. "Seed Pokémon". Falls back gracefully. */
@@ -249,23 +252,34 @@ export function toCardEnrichment(row: EnrichmentRow): CardEnrichment {
   const species = row.pokemon_v2_pokemonspecy
   const chain = species?.pokemon_v2_evolutionchain?.pokemon_v2_pokemonspecies ?? []
 
-  const source = row.levelMoves.length > 0 ? row.levelMoves : row.anyMoves
   const seen = new Set<string>()
+  const toAttack = (move: NonNullable<GqlMove>): CardAttack => ({
+    name: move.name,
+    power: move.power,
+    type: move.pokemon_v2_type?.name ?? 'normal',
+  })
+
+  // Earliest level-up moves first, ties broken alphabetically.
   const ranked: { level: number; attack: CardAttack }[] = []
-  for (const entry of source) {
+  for (const entry of row.levelMoves) {
     const move = entry.pokemon_v2_move
     if (!move || seen.has(move.name)) continue
     seen.add(move.name)
-    ranked.push({
-      level: entry.level ?? 0,
-      attack: {
-        name: move.name,
-        power: move.power,
-        type: move.pokemon_v2_type?.name ?? 'normal',
-      },
-    })
+    ranked.push({ level: entry.level ?? 0, attack: toAttack(move) })
   }
   ranked.sort((a, b) => a.level - b.level || a.attack.name.localeCompare(b.attack.name))
+
+  // A Pokémon can list fewer than two level-up moves (Metapod knows only
+  // Harden) — top the list up from its other moves, as the REST path did by
+  // unioning the level-up names with the full move list.
+  const attacks = ranked.slice(0, 2).map((r) => r.attack)
+  for (const entry of row.anyMoves) {
+    if (attacks.length >= 2) break
+    const move = entry.pokemon_v2_move
+    if (!move || seen.has(move.name)) continue
+    seen.add(move.name)
+    attacks.push(toAttack(move))
+  }
 
   const parentId = species?.evolves_from_species_id ?? null
   const parent = parentId != null ? chain.find((s) => s.id === parentId) : undefined
@@ -274,6 +288,6 @@ export function toCardEnrichment(row: EnrichmentRow): CardEnrichment {
     genus: species?.pokemon_v2_pokemonspeciesnames[0]?.genus ?? null,
     classification: species ? classifyFromChainLinks(species, chain) : null,
     preEvo: parent ? { name: parent.name, id: parent.id } : null,
-    attacks: ranked.slice(0, 2).map((r) => r.attack),
+    attacks,
   }
 }

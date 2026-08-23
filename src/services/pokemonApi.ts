@@ -318,15 +318,21 @@ export interface EnrichmentRow {
     pokemon_v2_pokemonspeciesnames: { genus: string }[]
     pokemon_v2_evolutionchain: { pokemon_v2_pokemonspecies: ChainSpeciesLink[] } | null
   } | null
-  /** Distinct level-up moves (one row per move, at its earliest level). */
+  /** Distinct level-up moves, one row per move at its earliest real level. */
   levelMoves: GqlMoveRow[]
-  /** Fallback for Pokémon/forms that list no level-up moves at all. */
+  /** Tops the list up to two when a Pokémon has fewer level-up moves. */
   anyMoves: GqlMoveRow[]
 }
 
-// `distinct_on` collapses the version-group duplicates PokéAPI stores per move;
+// `distinct_on` collapses the version-group duplicates PokeAPI stores per move;
 // Hasura requires the distinct column to lead `order_by`, so the earliest level
-// is selected by the secondary sort and the top-2 pick happens client-side.
+// is picked by the secondary sort and the top-2 selection happens client-side.
+//
+// `level: { _gt: 0 }` is load-bearing. PokeAPI stores `level_learned_at: 0` to
+// mean "already known on evolution", not "learned at level zero", and the REST
+// serializer omits those rows entirely -- so including them would surface moves
+// the REST path never showed (Squirtle picking up Follow Me from a FireRed
+// level-0 row) and sort them ahead of the real level-1 moves.
 const ENRICHMENT_QUERY = `query WindowEnrichment($ids: [Int!]) {
   pokemon_v2_pokemon(where: { id: { _in: $ids } }) {
     id
@@ -342,7 +348,10 @@ const ENRICHMENT_QUERY = `query WindowEnrichment($ids: [Int!]) {
       }
     }
     levelMoves: pokemon_v2_pokemonmoves(
-      where: { pokemon_v2_movelearnmethod: { name: { _eq: "level-up" } } }
+      where: {
+        pokemon_v2_movelearnmethod: { name: { _eq: "level-up" } }
+        level: { _gt: 0 }
+      }
       order_by: [{ move_id: asc }, { level: asc }]
       distinct_on: move_id
     ) {
@@ -352,7 +361,7 @@ const ENRICHMENT_QUERY = `query WindowEnrichment($ids: [Int!]) {
     anyMoves: pokemon_v2_pokemonmoves(
       order_by: [{ move_id: asc }]
       distinct_on: move_id
-      limit: 2
+      limit: 4
     ) {
       level
       pokemon_v2_move { name power pokemon_v2_type { name } }
