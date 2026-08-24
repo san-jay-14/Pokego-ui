@@ -35,7 +35,7 @@ export function TypeFilter({ value, onChange, bare = false, className = '' }: Ty
           aria-label="Filter Pokémon by type"
           className={`relative flex items-center gap-2 py-3 pl-3.5 pr-8 text-sm font-semibold text-ink outline-none transition-colors focus-visible:text-primary ${className} ${
             bare
-              ? 'w-full bg-transparent'
+              ? 'bg-transparent'
               : 'rounded-[var(--radius-control)] border border-border bg-surface shadow-[var(--shadow-sm)] hover:border-border-strong'
           }`}
         >
