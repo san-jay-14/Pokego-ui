@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import {
   fetchAbility,
@@ -10,6 +11,7 @@ import {
   fetchPokemonByType,
   fetchPokemonSpecies,
   fetchTypeDetail,
+  fetchWindowEnrichment,
 } from '@/services/pokemonApi'
 import type {
   AbilityDetail,
@@ -19,6 +21,7 @@ import type {
   TypeDetail,
 } from '@/types/pokemon'
 import { computeTypeEffectiveness, type TypeEffectiveness } from '@/utils/typeEffectiveness'
+import { toCardEnrichment, type CardEnrichment } from '@/utils/species'
 
 /** Query key factory — keeps cache keys consistent across the app. */
 export const pokemonKeys = {
@@ -32,6 +35,7 @@ export const pokemonKeys = {
   ability: (name: string) => ['ability', name] as const,
   encounters: (nameOrId: string | number) => ['pokemon', 'encounters', String(nameOrId)] as const,
   statIndex: ['pokemon', 'stat-index'] as const,
+  enrichment: (ids: number[]) => ['pokemon', 'enrichment', ids.join(',')] as const,
 }
 
 /** The full lightweight dex index (name + id), fetched once per session. */
@@ -197,4 +201,61 @@ export function useAbilityDetails(names: string[]) {
     if (r.data) byName.set(r.data.name, r.data)
   })
   return { byName, isLoading: results.some((r) => r.isLoading) }
+}
+
+/**
+ * How many Pokémon share one enrichment request. Matched to the grid's page
+ * size so "Load more" adds exactly one new chunk and leaves earlier chunks
+ * cached, rather than re-requesting a growing window.
+ */
+const ENRICHMENT_CHUNK = 20
+
+export interface WindowEnrichment {
+  /** Card view-model by dex id; absent while the chunk is still resolving. */
+  byId: Map<number, CardEnrichment>
+  isLoading: boolean
+}
+
+/**
+ * Batched card-flavor data for the visible window — genus, rarity/stage,
+ * pre-evolution and two real attacks — in one GraphQL request per page.
+ *
+ * Replaces five REST requests per card (species + evolution chain + two moves,
+ * plus the species -> chain waterfall). A failure is non-fatal: cards render
+ * with their type-derived fallbacks, exactly as they do while loading.
+ */
+export function useWindowEnrichment(ids: number[]): WindowEnrichment {
+  const chunks = useMemo(() => {
+    const out: number[][] = []
+    for (let i = 0; i < ids.length; i += ENRICHMENT_CHUNK) {
+      out.push(ids.slice(i, i + ENRICHMENT_CHUNK))
+    }
+    return out
+  }, [ids])
+
+  return useQueries({
+    queries: chunks.map((chunk) => ({
+      queryKey: pokemonKeys.enrichment(chunk),
+      queryFn: ({ signal }: { signal: AbortSignal }) => fetchWindowEnrichment(chunk, signal),
+      staleTime: Infinity,
+      retry: 1,
+    })),
+    combine: combineEnrichment,
+  })
+}
+
+/**
+ * Module-scoped so its identity is stable — `useQueries` memoizes `combine`
+ * against the function reference, so an inline arrow would rebuild the Map on
+ * every render and break `PokemonCard`'s memoization.
+ */
+function combineEnrichment(
+  results: { data?: Awaited<ReturnType<typeof fetchWindowEnrichment>>; isLoading: boolean }[],
+): WindowEnrichment {
+  const byId = new Map<number, CardEnrichment>()
+  for (const result of results) {
+    if (!result.data) continue
+    for (const row of result.data) byId.set(row.id, toCardEnrichment(row))
+  }
+  return { byId, isLoading: results.some((r) => r.isLoading) }
 }

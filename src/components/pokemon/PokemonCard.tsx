@@ -2,20 +2,14 @@ import { memo, useMemo } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Heart, Scale } from 'lucide-react'
-import type { MoveDetail, Pokemon } from '@/types/pokemon'
+import type { Pokemon } from '@/types/pokemon'
 import { getTypeConfig } from '@/constants/pokemonTypes'
 import { getTypeBackground } from '@/constants/typeBackgrounds'
 import { formatDexId, formatName, formatHeightImperial, formatWeightImperial, getArtwork, getStat, primaryType } from '@/utils/pokemon'
 import { energyCostForPower, retreatCost, weaknessFor } from '@/utils/tcg'
-import { getClassification, getGenus, getMovesByMethod, type Classification } from '@/utils/species'
+import { getMovesByMethod, type CardAttack, type CardEnrichment, type Classification } from '@/utils/species'
 import { formatMultiplier } from '@/utils/typeEffectiveness'
-import { idFromUrl } from '@/services/pokemonApi'
-import {
-  useEvolutionChain,
-  useMoveDetails,
-  usePokemonSpecies,
-  useTypeEffectiveness,
-} from '@/hooks/usePokemonData'
+import { useTypeEffectiveness } from '@/hooks/usePokemonData'
 import { EnergyPip } from './EnergyPip'
 import { useAppStore } from '@/store/useAppStore'
 import { useHoloPointer } from '@/hooks/useHoloPointer'
@@ -24,6 +18,8 @@ import { useInView } from '@/hooks/useInView'
 interface PokemonCardProps {
   pokemon: Pokemon
   index?: number
+  /** Batched card-flavor data for this Pokémon; undefined while it resolves. */
+  enrichment?: CardEnrichment
 }
 
 const INK = '#ffffff'
@@ -56,7 +52,11 @@ function getRarityTreatment(tone: Classification['tone'] | undefined, cfg: { fro
  * (Basic / Stage / Legendary…), genus, HP, real attack moves with their real
  * power, and the real type weakness — all fetched per card and cached.
  */
-export const PokemonCard = memo(function PokemonCard({ pokemon, index = 0 }: PokemonCardProps) {
+export const PokemonCard = memo(function PokemonCard({
+  pokemon,
+  index = 0,
+  enrichment,
+}: PokemonCardProps) {
   const primary = primaryType(pokemon)
   const cfg = getTypeConfig(primary)
   const scene = getTypeBackground(primary)
@@ -64,30 +64,31 @@ export const PokemonCard = memo(function PokemonCard({ pokemon, index = 0 }: Pok
   const retreat = retreatCost(pokemon.weight)
   const holo = useHoloPointer()
 
-  // The card's TCG "flavor" (classification, genus, weakness, move power) is
-  // enriched with several extra requests — only fire them once the card scrolls
-  // into view so the grid doesn't fetch hundreds of records up front.
+  // Genus / classification / pre-evo / attacks arrive pre-batched from
+  // `useWindowEnrichment` — one GraphQL request for the whole page rather than
+  // five REST requests per card. Type matchups stay on REST: there are only 18
+  // type records, they're edge-cached, and they amortize to nothing after the
+  // first page — so those alone remain gated on visibility.
   const { ref: inViewRef, inView } = useInView<HTMLDivElement>()
-
-  // Live data for original stats + classification + genus.
-  const species = usePokemonSpecies(pokemon.id, inView)
-  const evolution = useEvolutionChain(species.data?.evolution_chain.url, inView)
   const typeNames = useMemo(() => pokemon.types.map((t) => t.type.name), [pokemon])
   const effectiveness = useTypeEffectiveness(typeNames, inView)
-  // Prefer the Pokémon's characteristic early level-up moves over the arbitrary
-  // API order, so the two "attacks" shown are actually meaningful.
-  const attackNames = useMemo(() => {
+
+  // Until the batch lands, show the Pokémon's own early level-up move *names*
+  // (already present in the detail payload) so the attack rows don't flash
+  // "No known moves" — power and type fill in with the enrichment.
+  const pendingNames = useMemo(() => {
+    if (enrichment) return null
     const levelUp = getMovesByMethod(pokemon, 'level-up').map((m) => m.name)
     const fallback = pokemon.moves.map((m) => m.move.name)
     return Array.from(new Set([...levelUp, ...fallback])).slice(0, 2)
-  }, [pokemon])
-  const moves = useMoveDetails(attackNames, inView)
+  }, [pokemon, enrichment])
 
-  const genus = species.data ? getGenus(species.data) : `${cfg.label} Pokémon`
-  const classification = getClassification(species.data, evolution.data, pokemon.name)
-  const preEvo = species.data?.evolves_from_species ?? null
+  const genus = enrichment?.genus ?? `${cfg.label} Pokémon`
+  const classification = enrichment?.classification ?? null
+  const attacks = enrichment?.attacks ?? []
+  const preEvo = enrichment?.preEvo ?? null
   const preEvoSprite = preEvo
-    ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${idFromUrl(preEvo.url)}.png`
+    ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${preEvo.id}.png`
     : null
   const rarity = getRarityTreatment(classification?.tone, cfg)
   const hasBorder = classification?.tone === 'legendary' || classification?.tone === 'mythical' || classification?.tone === 'baby'
@@ -253,10 +254,10 @@ export const PokemonCard = memo(function PokemonCard({ pokemon, index = 0 }: Pok
 
               {/* Attacks (real move type + power) */}
               <div className="flex flex-col gap-[5px]">
-                <AttackRow name={attackNames[0]} detail={moves.byName.get(attackNames[0])} fallbackType={primary} />
-                {attackNames[1] && (
+                <AttackRow attack={attacks[0]} pendingName={pendingNames?.[0]} fallbackType={primary} />
+                {(attacks[1] ?? pendingNames?.[1]) && (
                   <div className="hidden @[210px]:block">
-                    <AttackRow name={attackNames[1]} detail={moves.byName.get(attackNames[1])} fallbackType={primary} />
+                    <AttackRow attack={attacks[1]} pendingName={pendingNames?.[1]} fallbackType={primary} />
                   </div>
                 )}
               </div>
@@ -350,14 +351,16 @@ function EvoBadge({ src }: { src: string }) {
 }
 
 function AttackRow({
-  name,
-  detail,
+  attack,
+  pendingName,
   fallbackType,
 }: {
-  name: string | undefined
-  detail: MoveDetail | undefined
+  attack: CardAttack | undefined
+  /** Name known from the detail payload while the batch is still in flight. */
+  pendingName?: string
   fallbackType: string
 }) {
+  const name = attack?.name ?? pendingName
   // A Pokémon (or form) can have zero moves listed in the API — show a
   // neutral placeholder rather than crash formatting an undefined name.
   if (!name) {
@@ -371,9 +374,7 @@ function AttackRow({
     )
   }
 
-  const cost = detail
-    ? energyCostForPower(detail.power, detail.type.name)
-    : [fallbackType]
+  const cost = attack ? energyCostForPower(attack.power, attack.type) : [fallbackType]
   return (
     <div className="flex items-center gap-1.5">
       <span className="flex shrink-0 items-center gap-[2px]">
@@ -385,7 +386,7 @@ function AttackRow({
         {formatName(name)}
       </span>
       <span className="tabular shrink-0 font-bold" style={{ fontSize: 'clamp(12px, 5.2cqw, 18px)' }}>
-        {detail ? detail.power ?? '—' : ''}
+        {attack ? attack.power ?? '—' : ''}
       </span>
     </div>
   )

@@ -18,7 +18,11 @@ import type {
  */
 
 const BASE_URL = 'https://pokeapi.co/api/v2'
-/** PokéAPI's GraphQL endpoint — used only for the whole-dex base-stat index. */
+/**
+ * PokéAPI's GraphQL endpoint. Used where REST's fixed resource shapes are the
+ * bottleneck: the whole-dex base-stat index, and the batched card enrichment.
+ * Everything else stays on REST, whose GETs are Cloudflare edge-cached.
+ */
 const GRAPHQL_URL = 'https://beta.pokeapi.co/graphql/v1beta'
 
 /** Discriminated error type so callers can branch on the failure mode. */
@@ -172,6 +176,49 @@ export async function fetchEncounters(
   return Array.isArray(data) ? data : []
 }
 
+/**
+ * POST a GraphQL document and return `data`, normalizing every failure into an
+ * `ApiError` exactly the way `request<T>()` does for REST. `label` is woven into
+ * the message so an error surfaces which query failed.
+ */
+async function graphqlRequest<T>(
+  query: string,
+  variables: Record<string, unknown> | undefined,
+  label: string,
+  signal?: AbortSignal,
+): Promise<T> {
+  let response: Response
+  try {
+    response = await fetch(GRAPHQL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(variables ? { query, variables } : { query }),
+      signal,
+    })
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') throw err
+    throw new ApiError('network', `Could not reach the ${label}.`)
+  }
+  if (!response.ok) {
+    throw new ApiError('http', `The ${label} request failed (${response.status}).`, response.status)
+  }
+
+  let json: { data?: T; errors?: { message?: string }[] }
+  try {
+    json = await response.json()
+  } catch {
+    throw new ApiError('malformed', `The ${label} returned an unexpected response.`)
+  }
+  // GraphQL reports query-level failures as a 200 with an `errors` array.
+  if (Array.isArray(json.errors) && json.errors.length > 0) {
+    throw new ApiError('malformed', json.errors[0]?.message ?? `The ${label} query failed.`)
+  }
+  if (json.data == null) {
+    throw new ApiError('malformed', `The ${label} returned an unexpected response.`)
+  }
+  return json.data
+}
+
 /** The three base stats the app can sort the whole dex by, keyed by dex id. */
 export type SortableStats = { hp: number; attack: number; speed: number }
 export type StatIndex = Map<number, SortableStats>
@@ -200,29 +247,13 @@ export async function fetchAllPokemonStats(signal?: AbortSignal): Promise<StatIn
     }
   }`
 
-  let response: Response
-  try {
-    response = await fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query }),
-      signal,
-    })
-  } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') throw err
-    throw new ApiError('network', 'Could not reach the stat index.')
-  }
-  if (!response.ok) {
-    throw new ApiError('http', `Stat index request failed (${response.status}).`, response.status)
-  }
-
-  let json: { data?: { pokemon_v2_pokemon?: GqlStatRow[] }; errors?: unknown }
-  try {
-    json = await response.json()
-  } catch {
-    throw new ApiError('malformed', 'The stat index returned an unexpected response.')
-  }
-  const rows = json.data?.pokemon_v2_pokemon
+  const data = await graphqlRequest<{ pokemon_v2_pokemon?: GqlStatRow[] }>(
+    query,
+    undefined,
+    'stat index',
+    signal,
+  )
+  const rows = data.pokemon_v2_pokemon
   if (!Array.isArray(rows)) {
     throw new ApiError('malformed', 'The stat index returned an unexpected response.')
   }
@@ -239,4 +270,120 @@ export async function fetchAllPokemonStats(signal?: AbortSignal): Promise<StatIn
     index.set(row.id, stats)
   }
   return index
+}
+
+/* ------------------------------------------------------------------------- *
+ * Batched card enrichment
+ *
+ * The grid's trading cards need four things the REST detail payload doesn't
+ * carry: the genus, the rarity/evolution-stage classification, the immediate
+ * pre-evolution, and two attacks with their real power and type.
+ *
+ * Fetching those over REST costs five requests per card (species, evolution
+ * chain, and two moves) — measured at 49 requests / 1.38 MB for a 20-card
+ * window, because REST returns whole resources: `/move/tackle` alone is 55 KB,
+ * almost all of it effect text in every language plus the full list of every
+ * Pokémon that learns it, to supply three fields.
+ *
+ * This asks for exactly those fields for the whole window in one request
+ * (~45 KB) — ~30x less data, and it collapses the detail -> species ->
+ * evolution-chain waterfall into a single round trip.
+ * ------------------------------------------------------------------------- */
+
+/** One species in an evolution chain, reduced to its parent link. */
+export interface ChainSpeciesLink {
+  id: number
+  name: string
+  evolves_from_species_id: number | null
+}
+
+interface GqlMoveRow {
+  level: number | null
+  pokemon_v2_move: {
+    name: string
+    power: number | null
+    pokemon_v2_type: { name: string } | null
+  } | null
+}
+
+/** Raw enrichment row as returned by the GraphQL query, one per Pokémon. */
+export interface EnrichmentRow {
+  id: number
+  pokemon_v2_pokemonspecy: {
+    id: number
+    is_legendary: boolean
+    is_mythical: boolean
+    is_baby: boolean
+    evolves_from_species_id: number | null
+    pokemon_v2_pokemonspeciesnames: { genus: string }[]
+    pokemon_v2_evolutionchain: { pokemon_v2_pokemonspecies: ChainSpeciesLink[] } | null
+  } | null
+  /** Distinct level-up moves, one row per move at its earliest real level. */
+  levelMoves: GqlMoveRow[]
+  /** Tops the list up to two when a Pokémon has fewer level-up moves. */
+  anyMoves: GqlMoveRow[]
+}
+
+// `distinct_on` collapses the version-group duplicates PokeAPI stores per move;
+// Hasura requires the distinct column to lead `order_by`, so the earliest level
+// is picked by the secondary sort and the top-2 selection happens client-side.
+//
+// `level: { _gt: 0 }` is load-bearing. PokeAPI stores `level_learned_at: 0` to
+// mean "already known on evolution", not "learned at level zero", and the REST
+// serializer omits those rows entirely -- so including them would surface moves
+// the REST path never showed (Squirtle picking up Follow Me from a FireRed
+// level-0 row) and sort them ahead of the real level-1 moves.
+const ENRICHMENT_QUERY = `query WindowEnrichment($ids: [Int!]) {
+  pokemon_v2_pokemon(where: { id: { _in: $ids } }) {
+    id
+    pokemon_v2_pokemonspecy {
+      id
+      is_legendary
+      is_mythical
+      is_baby
+      evolves_from_species_id
+      pokemon_v2_pokemonspeciesnames(where: { language_id: { _eq: 9 } }, limit: 1) { genus }
+      pokemon_v2_evolutionchain {
+        pokemon_v2_pokemonspecies { id name evolves_from_species_id }
+      }
+    }
+    levelMoves: pokemon_v2_pokemonmoves(
+      where: {
+        pokemon_v2_movelearnmethod: { name: { _eq: "level-up" } }
+        level: { _gt: 0 }
+      }
+      order_by: [{ move_id: asc }, { level: asc }]
+      distinct_on: move_id
+    ) {
+      level
+      pokemon_v2_move { name power pokemon_v2_type { name } }
+    }
+    anyMoves: pokemon_v2_pokemonmoves(
+      order_by: [{ move_id: asc }]
+      distinct_on: move_id
+      limit: 4
+    ) {
+      level
+      pokemon_v2_move { name power pokemon_v2_type { name } }
+    }
+  }
+}`
+
+/** Fetch the card-flavor data for a window of Pokémon ids in one request. */
+export async function fetchWindowEnrichment(
+  ids: number[],
+  signal?: AbortSignal,
+): Promise<EnrichmentRow[]> {
+  if (ids.length === 0) return []
+  const data = await graphqlRequest<{ pokemon_v2_pokemon?: EnrichmentRow[] }>(
+    ENRICHMENT_QUERY,
+    { ids },
+    'card details',
+    signal,
+  )
+  const rows = data.pokemon_v2_pokemon
+  if (!Array.isArray(rows)) {
+    throw new ApiError('malformed', 'The card details returned an unexpected response.')
+  }
+  return rows
 }
